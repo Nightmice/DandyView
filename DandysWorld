@@ -18,14 +18,14 @@ UICorner.Parent = frame
 
 -- Título no cabeçalho
 local headerLabel = Instance.new("TextLabel")
-headerLabel.Size = UDim2.new(1, 0, 0, 40)
-headerLabel.Position = UDim2.new(0, 0, 0, 0)
+headerLabel.Size = UDim2.new(0.7, 0, 0, 40)  -- Ajusta o título para ficar mais à esquerda
+headerLabel.Position = UDim2.new(0, 10, 0, 0)  -- Move o título para a esquerda
 headerLabel.Text = "MGI View by Nightmice x ChatGpt"
 headerLabel.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
 headerLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 headerLabel.TextSize = 16
 headerLabel.Font = Enum.Font.SourceSansBold
-headerLabel.TextXAlignment = Enum.TextXAlignment.Center
+headerLabel.TextXAlignment = Enum.TextXAlignment.Left  -- Alinha o texto à esquerda
 headerLabel.Parent = frame
 
 -- Tornar a janela arrastável
@@ -52,13 +52,33 @@ end)
 -- Botão de minimizar
 local minimizeButton = Instance.new("TextButton")
 minimizeButton.Size = UDim2.new(0, 40, 0, 30)
-minimizeButton.Position = UDim2.new(1, -50, 0, 10)
+minimizeButton.Position = UDim2.new(1, -90, 0, 10)  -- Ajusta a posição do botão de minimizar
 minimizeButton.Text = "-"
 minimizeButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
 minimizeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 minimizeButton.TextSize = 20
 minimizeButton.Font = Enum.Font.SourceSansBold
 minimizeButton.Parent = frame
+
+-- Botão de fechar
+local closeButton = Instance.new("TextButton")
+closeButton.Size = UDim2.new(0, 40, 0, 30)
+closeButton.Position = UDim2.new(1, -50, 0, 10)  -- Ajusta a posição do botão de fechar
+closeButton.Text = "X"
+closeButton.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+closeButton.TextSize = 20
+closeButton.Font = Enum.Font.SourceSansBold
+closeButton.Parent = frame
+
+-- Adicionando bordas arredondadas aos botões
+local minimizeCorner = Instance.new("UICorner")
+minimizeCorner.CornerRadius = UDim.new(0, 12)
+minimizeCorner.Parent = minimizeButton
+
+local closeCorner = Instance.new("UICorner")
+closeCorner.CornerRadius = UDim.new(0, 12)
+closeCorner.Parent = closeButton
 
 -- Container do conteúdo (baixo do cabeçalho)
 local contentFrame = Instance.new("Frame")
@@ -159,7 +179,7 @@ function destacarMonstros()
 		monsterHighlights = {}
 		return
 	end
-	
+
 	-- Remove os destaques anteriores
 	for _, h in pairs(monsterHighlights) do h:Destroy() end
 	monsterHighlights = {}
@@ -186,41 +206,30 @@ function destacarMonstros()
 	end
 end
 
--- Função de destacar geradores
 function destacarGeradores()
 	if not generatorToggle then
-		-- Remove os destaques se o toggle estiver desligado
 		for _, h in pairs(generatorHighlights) do h:Destroy() end
 		generatorHighlights = {}
 		return
 	end
-	
-	-- Remove os destaques anteriores
+
 	for _, h in pairs(generatorHighlights) do h:Destroy() end
 	generatorHighlights = {}
 
 	local currentRoom = workspace:FindFirstChild("CurrentRoom")
 	if currentRoom then
-		-- Para cada sala dentro de CurrentRoom
 		for _, sala in pairs(currentRoom:GetChildren()) do
 			if sala:IsA("Model") then
-				-- Dentro de cada sala, encontramos o modelo com nome independente (sala)
-				local salaModel = sala:FindFirstChildWhichIsA("Model")
-				if salaModel then
-					-- Verifica se a sala tem a pasta "Generators"
-					local generatorsFolder = salaModel:FindFirstChild("Generators")
-					if generatorsFolder then
-						-- Para cada gerador na pasta "Generators" (não há mais verificação de nome)
-						for _, generator in pairs(generatorsFolder:GetChildren()) do
-							if generator:IsA("Model") then
-								-- Criando o Highlight diretamente no gerador
-								local highlight = Instance.new("Highlight")
-								highlight.FillColor = Color3.fromRGB(0, 0, 255)
-								highlight.OutlineColor = Color3.fromRGB(0, 0, 255)
-								highlight.Adornee = generator
-								highlight.Parent = generator
-								table.insert(generatorHighlights, highlight)
-							end
+				local generatorsFolder = sala:FindFirstChild("Generators")
+				if generatorsFolder then
+					for _, generator in pairs(generatorsFolder:GetChildren()) do
+						if generator:IsA("Model") then
+							local highlight = Instance.new("Highlight")
+							highlight.FillColor = Color3.fromRGB(0, 0, 255)
+							highlight.OutlineColor = Color3.fromRGB(0, 0, 255)
+							highlight.Adornee = generator
+							highlight.Parent = generator
+							table.insert(generatorHighlights, highlight)
 						end
 					end
 				end
@@ -237,7 +246,7 @@ function destacarItens()
 		itemHighlights = {}
 		return
 	end
-	
+
 	-- Remove os destaques anteriores
 	for _, h in pairs(itemHighlights) do h:Destroy() end
 	itemHighlights = {}
@@ -275,4 +284,11 @@ minimizeButton.MouseButton1Click:Connect(function()
 		frame.Size = UDim2.new(0, 400, 0, 300)  -- Restaura o tamanho da janela
 		contentFrame.Visible = true  -- Exibe o conteúdo
 	end
+end)
+
+-- Funcionalidade do botão de fechar (fade-out e destruição da janela)
+closeButton.MouseButton1Click:Connect(function()
+	frame:TweenPosition(UDim2.new(0.5, -200, 0.5, -150), "Out", "Quad", 0.5, true, function()
+		screenGui:Destroy()  -- Destrói a UI após o fade-out
+	end)
 end)
