@@ -97,10 +97,12 @@ UIListLayout.Parent = contentFrame
 local monsterToggle = true
 local generatorToggle = true
 local itemToggle = true
+local playerToggle = true  -- Toggle para jogadores
 
 local monsterHighlights = {}
 local generatorHighlights = {}
 local itemHighlights = {}
+local playerHighlights = {}  -- Lista de destaques para jogadores
 
 -- Função de criar toggle
 local function createToggle(name, color, callback)
@@ -171,6 +173,11 @@ createToggle("Itens", Color3.fromRGB(0, 255, 0), function(state)
 	destacarItens()
 end)
 
+createToggle("Jogadores", Color3.fromRGB(255, 255, 0), function(state)  -- Novo toggle para jogadores
+	playerToggle = state
+	destacarJogadores()
+end)
+
 -- Função de destacar monstros
 function destacarMonstros()
 	if not monsterToggle then
@@ -238,7 +245,6 @@ function destacarGeradores()
 	end
 end
 
--- Função de destacar itens
 function destacarItens()
 	if not itemToggle then
 		-- Remove os destaques se o toggle estiver desligado
@@ -273,22 +279,47 @@ function destacarItens()
 	end
 end
 
--- Funcionalidade de minimizar a janela
-local isMinimized = false
+function destacarJogadores()
+	if not playerToggle then
+		-- Remove os destaques se o toggle estiver desligado
+		for _, h in pairs(playerHighlights) do h:Destroy() end
+		playerHighlights = {}
+		return
+	end
+
+	for _, h in pairs(playerHighlights) do h:Destroy() end
+	playerHighlights = {}
+
+	for _, player in pairs(game.Players:GetPlayers()) do
+		if player.Character then
+			local highlight = Instance.new("Highlight")
+			highlight.FillColor = Color3.fromRGB(255, 255, 0)
+			highlight.OutlineColor = Color3.fromRGB(255, 255, 0)
+			highlight.Adornee = player.Character
+			highlight.Parent = player.Character
+			table.insert(playerHighlights, highlight)
+		end
+	end
+end
+
+-- Função de minimizar
 minimizeButton.MouseButton1Click:Connect(function()
-	isMinimized = not isMinimized
-	if isMinimized then
-		frame.Size = UDim2.new(0, 400, 0, 40)  -- Reduz a altura da janela para apenas mostrar o cabeçalho
+	if frame.Size == UDim2.new(0, 400, 0, 300) then
+		frame.Size = UDim2.new(0, 400, 0, 50)  -- Reduz a altura do frame para 50px (apenas o título visível)
 		contentFrame.Visible = false  -- Esconde o conteúdo
 	else
-		frame.Size = UDim2.new(0, 400, 0, 300)  -- Restaura o tamanho da janela
-		contentFrame.Visible = true  -- Exibe o conteúdo
+		frame.Size = UDim2.new(0, 400, 0, 300)  -- Restaura o tamanho do frame
+		contentFrame.Visible = true  -- Restaura a visibilidade do conteúdo
 	end
 end)
 
--- Funcionalidade do botão de fechar (fade-out e destruição da janela)
+-- Função de fechar a UI
 closeButton.MouseButton1Click:Connect(function()
-	frame:TweenPosition(UDim2.new(0.5, -200, 0.5, -150), "Out", "Quad", 0.5, true, function()
-		screenGui:Destroy()  -- Destrói a UI após o fade-out
-	end)
+	screenGui:Destroy()  -- Destrói a UI quando o botão "X" é clicado
 end)
+
+-- Inicialização
+destacarMonstros()
+destacarGeradores()
+destacarItens()
+destacarJogadores()
