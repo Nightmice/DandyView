@@ -105,7 +105,7 @@ local itemHighlights = {}
 local playerHighlights = {}  -- Lista de destaques para jogadores
 
 -- Função de criar toggle
-local function createToggle(name, color, callback)
+local function createToggle(name, color, callback, initialState)
 	local holder = Instance.new("Frame")
 	holder.Size = UDim2.new(1, 0, 0, 40)
 	holder.BackgroundTransparency = 1
@@ -143,7 +143,13 @@ local function createToggle(name, color, callback)
 	knobCorner.CornerRadius = UDim.new(1, 0)
 	knobCorner.Parent = knob
 
-	local enabled = false
+	-- Define o estado inicial
+	local enabled = initialState
+	if enabled then
+		knob.Position = UDim2.new(1, -22, 0, 2)
+		knob.BackgroundColor3 = color
+	end
+
 	toggle.InputBegan:Connect(function(input)
 		if input.UserInputType == Enum.UserInputType.MouseButton1 then
 			enabled = not enabled
@@ -157,26 +163,28 @@ local function createToggle(name, color, callback)
 	end)
 end
 
--- Criar botões de toggle
+-- Criar botões de toggle com estado inicial
 createToggle("Monstros", Color3.fromRGB(255, 0, 0), function(state)
 	monsterToggle = state
 	destacarMonstros()
-end)
+end, monsterToggle)
 
 createToggle("Geradores", Color3.fromRGB(0, 0, 255), function(state)
 	generatorToggle = state
 	destacarGeradores()
-end)
+end, generatorToggle)
 
 createToggle("Itens", Color3.fromRGB(0, 255, 0), function(state)
 	itemToggle = state
 	destacarItens()
-end)
+end, itemToggle)
 
-createToggle("Jogadores", Color3.fromRGB(255, 255, 0), function(state)  -- Novo toggle para jogadores
+createToggle("Jogadores", Color3.fromRGB(255, 255, 0), function(state)
 	playerToggle = state
 	destacarJogadores()
-end)
+end, playerToggle)
+
+
 
 -- Função de destacar monstros
 function destacarMonstros()
@@ -317,6 +325,7 @@ end)
 closeButton.MouseButton1Click:Connect(function()
 	screenGui:Destroy()  -- Destrói a UI quando o botão "X" é clicado
 end)
+
 
 -- Inicialização
 destacarMonstros()
