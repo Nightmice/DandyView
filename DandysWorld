@@ -1,5 +1,6 @@
 local screenGui = Instance.new("ScreenGui")
 screenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+screenGui.Name = "NightmiceMGIView"
 
 local frame = Instance.new("Frame")
 frame.Size = UDim2.new(0, 400, 0, 300)
@@ -113,10 +114,18 @@ local generatorHighlights = {}
 local itemHighlights = {}
 local playerHighlights = {}
 
+local function waitForCurrentRoom()
+	while not workspace:FindFirstChild("CurrentRoom") do
+		wait(1)
+	end
+	return workspace.CurrentRoom
+end
+
 local function createToggle(name, color, callback, initialState)
 	local holder = Instance.new("Frame")
 	holder.Size = UDim2.new(1, 0, 0, 40)
 	holder.BackgroundTransparency = 1
+	holder:SetAttribute("ToggleColor", color)
 	holder.Parent = contentFrame
 
 	local label = Instance.new("TextLabel")
@@ -168,113 +177,55 @@ local function createToggle(name, color, callback, initialState)
 			callback(enabled)
 		end
 	end)
+
+	return holder
 end
 
-function destacarMonstros()
-	if not monsterToggle then
-		for _, h in pairs(monsterHighlights) do h:Destroy() end
-		monsterHighlights = {}
-		return
+local function destacarObjetos(config)
+	for _, highlight in pairs(config.listaHighlights or {}) do
+		if highlight then
+			highlight:Destroy()
+		end
+	end
+	config.listaHighlights = {}
+
+	if not config.toggleAtivo then
+		return config.listaHighlights
 	end
 
-	for _, h in pairs(monsterHighlights) do h:Destroy() end
-	monsterHighlights = {}
-
 	local currentRoom = workspace:FindFirstChild("CurrentRoom")
-	if currentRoom then
-		for _, sala in pairs(currentRoom:GetChildren()) do
-			if sala:IsA("Model") then
-				local monstersFolder = sala:FindFirstChild("Monsters")
-				if monstersFolder then
-					for _, monstro in pairs(monstersFolder:GetChildren()) do
-						if monstro:IsA("Model") and monstro.Name:match("Monster$") then
-							local highlight = Instance.new("Highlight")
-							highlight.FillColor = Color3.fromRGB(255, 0, 0)
-							highlight.OutlineColor = Color3.fromRGB(255, 0, 0)
-							highlight.Adornee = monstro
-							highlight.Parent = monstro
-							table.insert(monsterHighlights, highlight)
-						end
+	if not currentRoom then return config.listaHighlights end
+
+	for _, sala in pairs(currentRoom:GetChildren()) do
+		if sala:IsA("Model") then
+			local folder = sala:FindFirstChild(config.pastaNome)
+			if folder then
+				for _, obj in pairs(folder:GetChildren()) do
+					if obj:IsA("Model") and (not config.condicaoExtra or config.condicaoExtra(obj)) then
+						local highlight = Instance.new("Highlight")
+						highlight.FillColor = config.cor
+						highlight.OutlineColor = config.cor
+						highlight.Adornee = obj
+						highlight.Parent = obj
+						table.insert(config.listaHighlights, highlight)
 					end
 				end
 			end
 		end
 	end
+
+	return config.listaHighlights
 end
 
-function destacarGeradores()
-	if not generatorToggle then
-		for _, h in pairs(generatorHighlights) do h:Destroy() end
-		generatorHighlights = {}
-		return
-	end
-
-	for _, h in pairs(generatorHighlights) do h:Destroy() end
-	generatorHighlights = {}
-
-	local currentRoom = workspace:FindFirstChild("CurrentRoom")
-	if currentRoom then
-		for _, sala in pairs(currentRoom:GetChildren()) do
-			if sala:IsA("Model") then
-				local generatorsFolder = sala:FindFirstChild("Generators")
-				if generatorsFolder then
-					for _, generator in pairs(generatorsFolder:GetChildren()) do
-						if generator:IsA("Model") then
-							local highlight = Instance.new("Highlight")
-							highlight.FillColor = Color3.fromRGB(0, 0, 255)
-							highlight.OutlineColor = Color3.fromRGB(0, 0, 255)
-							highlight.Adornee = generator
-							highlight.Parent = generator
-							table.insert(generatorHighlights, highlight)
-						end
-					end
-				end
-			end
+local function destacarJogadores()
+	for _, highlight in pairs(playerHighlights) do
+		if highlight then
+			highlight:Destroy()
 		end
 	end
-end
-
-function destacarItens()
-	if not itemToggle then
-		for _, h in pairs(itemHighlights) do h:Destroy() end
-		itemHighlights = {}
-		return
-	end
-
-	for _, h in pairs(itemHighlights) do h:Destroy() end
-	itemHighlights = {}
-
-	local currentRoom = workspace:FindFirstChild("CurrentRoom")
-	if currentRoom then
-		for _, sala in pairs(currentRoom:GetChildren()) do
-			if sala:IsA("Model") then
-				local itemsFolder = sala:FindFirstChild("Items")
-				if itemsFolder then
-					for _, item in pairs(itemsFolder:GetChildren()) do
-						if item:IsA("Model") then
-							local highlight = Instance.new("Highlight")
-							highlight.FillColor = Color3.fromRGB(0, 255, 0)
-							highlight.OutlineColor = Color3.fromRGB(0, 255, 0)
-							highlight.Adornee = item
-							highlight.Parent = item
-							table.insert(itemHighlights, highlight)
-						end
-					end
-				end
-			end
-		end
-	end
-end
-
-function destacarJogadores()
-	if not playerToggle then
-		for _, h in pairs(playerHighlights) do h:Destroy() end
-		playerHighlights = {}
-		return
-	end
-
-	for _, h in pairs(playerHighlights) do h:Destroy() end
 	playerHighlights = {}
+
+	if not playerToggle then return end
 
 	for _, player in pairs(game.Players:GetPlayers()) do
 		if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
@@ -288,31 +239,99 @@ function destacarJogadores()
 	end
 end
 
-local minimized = false
-minimizeButton.MouseButton1Click:Connect(function()
-	if minimized then
-		frame:TweenSize(UDim2.new(0, 400, 0, 300), "Out", "Elastic", 1.5, true)
-		minimizeButton.Text = "↓"
-	else
-		frame:TweenSize(UDim2.new(0, 400, 0, 50), "Out", "Bounce", 0.8, true)
-		minimizeButton.Text = "↑"
-	end
-	minimized = not minimized
-end)
+-- Adiciona o toggle mestre
+local masterToggleHolder = createToggle("TODOS", Color3.fromRGB(255, 165, 0), function(state)
+	monsterToggle = state
+	generatorToggle = state
+	itemToggle = state
+	playerToggle = state
 
+	-- Atualiza visualmente os knobs dos outros toggles
+	for _, child in ipairs(contentFrame:GetChildren()) do
+		if child:IsA("Frame") and child ~= masterToggleHolder then
+			local toggle = child:FindFirstChildOfClass("Frame")
+			if toggle then
+				local knob = toggle:FindFirstChildOfClass("Frame")
+				if knob then
+					knob:TweenPosition(
+						state and UDim2.new(1, -22, 0, 2) or UDim2.new(0, 2, 0, 2),
+						"Out", "Quad", 0.2, true
+					)
+					knob.BackgroundColor3 = state and child:GetAttribute("ToggleColor") or Color3.fromRGB(200, 200, 200)
+				end
+			end
+		end
+	end
+
+	-- Ativa/desativa todos os highlights
+	monsterHighlights = destacarObjetos({
+		pastaNome = "Monsters",
+		cor = Color3.fromRGB(255, 0, 0),
+		listaHighlights = monsterHighlights,
+		toggleAtivo = state,
+		condicaoExtra = function(obj)
+			return obj.Name:match("Monster$")
+		end
+	})
+
+	generatorHighlights = destacarObjetos({
+		pastaNome = "Generators",
+		cor = Color3.fromRGB(0, 0, 255),
+		listaHighlights = generatorHighlights,
+		toggleAtivo = state
+	})
+
+	itemHighlights = destacarObjetos({
+		pastaNome = "Items",
+		cor = Color3.fromRGB(0, 255, 0),
+		listaHighlights = itemHighlights,
+		toggleAtivo = state
+	})
+
+	if state then
+		destacarJogadores()
+	else
+		for _, highlight in pairs(playerHighlights) do
+			if highlight then
+				highlight:Destroy()
+			end
+		end
+		playerHighlights = {}
+	end
+end, true)
+
+-- Adiciona os toggles individuais
 createToggle("Monstros", Color3.fromRGB(255, 0, 0), function(state)
 	monsterToggle = state
-	destacarMonstros()
+	monsterHighlights = destacarObjetos({
+		pastaNome = "Monsters",
+		cor = Color3.fromRGB(255, 0, 0),
+		listaHighlights = monsterHighlights,
+		toggleAtivo = state,
+		condicaoExtra = function(obj)
+			return obj.Name:match("Monster$")
+		end
+	})
 end, monsterToggle)
 
 createToggle("Geradores", Color3.fromRGB(0, 0, 255), function(state)
 	generatorToggle = state
-	destacarGeradores()
+	generatorHighlights = destacarObjetos({
+		pastaNome = "Generators",
+		cor = Color3.fromRGB(0, 0, 255),
+		listaHighlights = generatorHighlights,
+		toggleAtivo = state
+	})
 end, generatorToggle)
 
 createToggle("Itens", Color3.fromRGB(0, 255, 0), function(state)
 	itemToggle = state
-	destacarItens()
+	itemHighlights = destacarObjetos({
+		pastaNome = "Items",
+		cor = Color3.fromRGB(0, 255, 0),
+		listaHighlights = itemHighlights,
+		toggleAtivo = state
+	})
 end, itemToggle)
 
 createToggle("Jogadores", Color3.fromRGB(255, 255, 0), function(state)
@@ -320,7 +339,84 @@ createToggle("Jogadores", Color3.fromRGB(255, 255, 0), function(state)
 	destacarJogadores()
 end, playerToggle)
 
-destacarMonstros()
-destacarGeradores()
-destacarItens()
-destacarJogadores()
+-- Conexão para atualizar quando novos objetos são adicionados
+local function setupRoomConnections()
+	local currentRoom = waitForCurrentRoom()
+
+	currentRoom.ChildAdded:Connect(function(child)
+		wait(1) -- Espera um pouco para garantir que o objeto esteja totalmente carregado
+		if monsterToggle then
+			monsterHighlights = destacarObjetos({
+				pastaNome = "Monsters",
+				cor = Color3.fromRGB(255, 0, 0),
+				listaHighlights = monsterHighlights,
+				toggleAtivo = monsterToggle,
+				condicaoExtra = function(obj)
+					return obj.Name:match("Monster$")
+				end
+			})
+		end
+
+		if generatorToggle then
+			generatorHighlights = destacarObjetos({
+				pastaNome = "Generators",
+				cor = Color3.fromRGB(0, 0, 255),
+				listaHighlights = generatorHighlights,
+				toggleAtivo = generatorToggle
+			})
+		end
+
+		if itemToggle then
+			itemHighlights = destacarObjetos({
+				pastaNome = "Items",
+				cor = Color3.fromRGB(0, 255, 0),
+				listaHighlights = itemHighlights,
+				toggleAtivo = itemToggle
+			})
+		end
+	end)
+end
+
+-- Inicialização dos highlights
+spawn(function()
+	setupRoomConnections()
+
+	monsterHighlights = destacarObjetos({
+		pastaNome = "Monsters",
+		cor = Color3.fromRGB(255, 0, 0),
+		listaHighlights = monsterHighlights,
+		toggleAtivo = monsterToggle,
+		condicaoExtra = function(obj)
+			return obj.Name:match("Monster$")
+		end
+	})
+
+	generatorHighlights = destacarObjetos({
+		pastaNome = "Generators",
+		cor = Color3.fromRGB(0, 0, 255),
+		listaHighlights = generatorHighlights,
+		toggleAtivo = generatorToggle
+	})
+
+	itemHighlights = destacarObjetos({
+		pastaNome = "Items",
+		cor = Color3.fromRGB(0, 255, 0),
+		listaHighlights = itemHighlights,
+		toggleAtivo = itemToggle
+	})
+
+	destacarJogadores()
+end)
+
+-- Conexão para jogadores entrando/saindo
+game.Players.PlayerAdded:Connect(function()
+	if playerToggle then
+		destacarJogadores()
+	end
+end)
+
+game.Players.PlayerRemoving:Connect(function()
+	if playerToggle then
+		destacarJogadores()
+	end
+end)
