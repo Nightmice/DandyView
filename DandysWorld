@@ -1,8 +1,6 @@
--- Criação da tela principal
 local screenGui = Instance.new("ScreenGui")
 screenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
 
--- Criando o quadro (janela)
 local frame = Instance.new("Frame")
 frame.Size = UDim2.new(0, 400, 0, 300)
 frame.Position = UDim2.new(0.5, -200, 0.5, -150)
@@ -11,24 +9,24 @@ frame.BorderSizePixel = 0
 frame.ClipsDescendants = true
 frame.Parent = screenGui
 
--- Bordas arredondadas
 local UICorner = Instance.new("UICorner")
 UICorner.CornerRadius = UDim.new(0, 20)
 UICorner.Parent = frame
 
--- Título no cabeçalho
 local headerLabel = Instance.new("TextLabel")
-headerLabel.Size = UDim2.new(0.7, 0, 0, 40)  -- Ajusta o título para ficar mais à esquerda
-headerLabel.Position = UDim2.new(0, 10, 0, 0)  -- Move o título para a esquerda
+headerLabel.Size = UDim2.new(0.7, 0, 0, 40)
+headerLabel.Position = UDim2.new(0, 10, 0, 10)
 headerLabel.Text = "MGI View by Nightmice x ChatGpt"
 headerLabel.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
 headerLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 headerLabel.TextSize = 16
 headerLabel.Font = Enum.Font.SourceSansBold
-headerLabel.TextXAlignment = Enum.TextXAlignment.Left  -- Alinha o texto à esquerda
+headerLabel.TextXAlignment = Enum.TextXAlignment.Center
 headerLabel.Parent = frame
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(0, 9)
+corner.Parent = headerLabel
 
--- Tornar a janela arrastável
 local dragging, dragInput, dragStart, startPos
 frame.InputBegan:Connect(function(input)
 	if input.UserInputType == Enum.UserInputType.MouseButton1 then
@@ -49,21 +47,31 @@ frame.InputEnded:Connect(function(input)
 	end
 end)
 
--- Botão de minimizar
 local minimizeButton = Instance.new("TextButton")
 minimizeButton.Size = UDim2.new(0, 40, 0, 30)
-minimizeButton.Position = UDim2.new(1, -90, 0, 10)  -- Ajusta a posição do botão de minimizar
-minimizeButton.Text = "-"
+minimizeButton.Position = UDim2.new(1, -90, 0, 10)
+minimizeButton.Text = "↓"
 minimizeButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
 minimizeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 minimizeButton.TextSize = 20
 minimizeButton.Font = Enum.Font.SourceSansBold
 minimizeButton.Parent = frame
 
--- Botão de fechar
+local isMinimized = false
+minimizeButton.MouseButton1Click:Connect(function()
+	if isMinimized then
+		frame.Size = UDim2.new(0, 400, 0, 300)
+		minimizeButton.Text = "↓"
+	else
+		frame.Size = UDim2.new(0, 400, 0, 40)
+		minimizeButton.Text = "↑"
+	end
+	isMinimized = not isMinimized
+end)
+
 local closeButton = Instance.new("TextButton")
 closeButton.Size = UDim2.new(0, 40, 0, 30)
-closeButton.Position = UDim2.new(1, -50, 0, 10)  -- Ajusta a posição do botão de fechar
+closeButton.Position = UDim2.new(1, -50, 0, 10)
 closeButton.Text = "X"
 closeButton.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
 closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -71,7 +79,10 @@ closeButton.TextSize = 20
 closeButton.Font = Enum.Font.SourceSansBold
 closeButton.Parent = frame
 
--- Adicionando bordas arredondadas aos botões
+closeButton.MouseButton1Click:Connect(function()
+	screenGui:Destroy()
+end)
+
 local minimizeCorner = Instance.new("UICorner")
 minimizeCorner.CornerRadius = UDim.new(0, 12)
 minimizeCorner.Parent = minimizeButton
@@ -80,7 +91,6 @@ local closeCorner = Instance.new("UICorner")
 closeCorner.CornerRadius = UDim.new(0, 12)
 closeCorner.Parent = closeButton
 
--- Container do conteúdo (baixo do cabeçalho)
 local contentFrame = Instance.new("Frame")
 contentFrame.Size = UDim2.new(1, -20, 1, -50)
 contentFrame.Position = UDim2.new(0, 10, 0, 40)
@@ -93,18 +103,16 @@ UIListLayout.Padding = UDim.new(0, 10)
 UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
 UIListLayout.Parent = contentFrame
 
--- Variáveis globais
 local monsterToggle = true
 local generatorToggle = true
 local itemToggle = true
-local playerToggle = true  -- Toggle para jogadores
+local playerToggle = true
 
 local monsterHighlights = {}
 local generatorHighlights = {}
 local itemHighlights = {}
-local playerHighlights = {}  -- Lista de destaques para jogadores
+local playerHighlights = {}
 
--- Função de criar toggle
 local function createToggle(name, color, callback, initialState)
 	local holder = Instance.new("Frame")
 	holder.Size = UDim2.new(1, 0, 0, 40)
@@ -143,7 +151,6 @@ local function createToggle(name, color, callback, initialState)
 	knobCorner.CornerRadius = UDim.new(1, 0)
 	knobCorner.Parent = knob
 
-	-- Define o estado inicial
 	local enabled = initialState
 	if enabled then
 		knob.Position = UDim2.new(1, -22, 0, 2)
@@ -163,39 +170,13 @@ local function createToggle(name, color, callback, initialState)
 	end)
 end
 
--- Criar botões de toggle com estado inicial
-createToggle("Monstros", Color3.fromRGB(255, 0, 0), function(state)
-	monsterToggle = state
-	destacarMonstros()
-end, monsterToggle)
-
-createToggle("Geradores", Color3.fromRGB(0, 0, 255), function(state)
-	generatorToggle = state
-	destacarGeradores()
-end, generatorToggle)
-
-createToggle("Itens", Color3.fromRGB(0, 255, 0), function(state)
-	itemToggle = state
-	destacarItens()
-end, itemToggle)
-
-createToggle("Jogadores", Color3.fromRGB(255, 255, 0), function(state)
-	playerToggle = state
-	destacarJogadores()
-end, playerToggle)
-
-
-
--- Função de destacar monstros
 function destacarMonstros()
 	if not monsterToggle then
-		-- Remove os destaques se o toggle estiver desligado
 		for _, h in pairs(monsterHighlights) do h:Destroy() end
 		monsterHighlights = {}
 		return
 	end
 
-	-- Remove os destaques anteriores
 	for _, h in pairs(monsterHighlights) do h:Destroy() end
 	monsterHighlights = {}
 
@@ -255,13 +236,11 @@ end
 
 function destacarItens()
 	if not itemToggle then
-		-- Remove os destaques se o toggle estiver desligado
 		for _, h in pairs(itemHighlights) do h:Destroy() end
 		itemHighlights = {}
 		return
 	end
 
-	-- Remove os destaques anteriores
 	for _, h in pairs(itemHighlights) do h:Destroy() end
 	itemHighlights = {}
 
@@ -289,7 +268,6 @@ end
 
 function destacarJogadores()
 	if not playerToggle then
-		-- Remove os destaques se o toggle estiver desligado
 		for _, h in pairs(playerHighlights) do h:Destroy() end
 		playerHighlights = {}
 		return
@@ -299,7 +277,7 @@ function destacarJogadores()
 	playerHighlights = {}
 
 	for _, player in pairs(game.Players:GetPlayers()) do
-		if player.Character then
+		if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
 			local highlight = Instance.new("Highlight")
 			highlight.FillColor = Color3.fromRGB(255, 255, 0)
 			highlight.OutlineColor = Color3.fromRGB(255, 255, 0)
@@ -310,24 +288,38 @@ function destacarJogadores()
 	end
 end
 
--- Função de minimizar
+local minimized = false
 minimizeButton.MouseButton1Click:Connect(function()
-	if frame.Size == UDim2.new(0, 400, 0, 300) then
-		frame.Size = UDim2.new(0, 400, 0, 50)  -- Reduz a altura do frame para 50px (apenas o título visível)
-		contentFrame.Visible = false  -- Esconde o conteúdo
+	if minimized then
+		frame:TweenSize(UDim2.new(0, 400, 0, 300), "Out", "Elastic", 1.5, true)
+		minimizeButton.Text = "↓"
 	else
-		frame.Size = UDim2.new(0, 400, 0, 300)  -- Restaura o tamanho do frame
-		contentFrame.Visible = true  -- Restaura a visibilidade do conteúdo
+		frame:TweenSize(UDim2.new(0, 400, 0, 50), "Out", "Bounce", 0.8, true)
+		minimizeButton.Text = "↑"
 	end
+	minimized = not minimized
 end)
 
--- Função de fechar a UI
-closeButton.MouseButton1Click:Connect(function()
-	screenGui:Destroy()  -- Destrói a UI quando o botão "X" é clicado
-end)
+createToggle("Monstros", Color3.fromRGB(255, 0, 0), function(state)
+	monsterToggle = state
+	destacarMonstros()
+end, monsterToggle)
 
+createToggle("Geradores", Color3.fromRGB(0, 0, 255), function(state)
+	generatorToggle = state
+	destacarGeradores()
+end, generatorToggle)
 
--- Inicialização
+createToggle("Itens", Color3.fromRGB(0, 255, 0), function(state)
+	itemToggle = state
+	destacarItens()
+end, itemToggle)
+
+createToggle("Jogadores", Color3.fromRGB(255, 255, 0), function(state)
+	playerToggle = state
+	destacarJogadores()
+end, playerToggle)
+
 destacarMonstros()
 destacarGeradores()
 destacarItens()
