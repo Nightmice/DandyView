@@ -1,497 +1,1252 @@
-local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "MGIViewGUI"
-screenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+-- MGI View v4.3
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+local Workspace = game:GetService("Workspace")
+local Lighting = game:GetService("Lighting")
 
-local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0, 400, 0, 300)
-frame.Position = UDim2.new(0.5, -200, 0.5, -150)
-frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-frame.BorderSizePixel = 0
-frame.ClipsDescendants = true
-frame.Parent = screenGui
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 
-local UICorner = Instance.new("UICorner")
-UICorner.CornerRadius = UDim.new(0, 20)
-UICorner.Parent = frame
+local EXISTING = PlayerGui:FindFirstChild("MGIViewGUI")
+if EXISTING then
+    EXISTING:Destroy()
+end
 
-local headerLabel = Instance.new("TextLabel")
-headerLabel.Size = UDim2.new(0.7, 0, 0, 40)
-headerLabel.Position = UDim2.new(0, 10, 0, 10)
-headerLabel.Text = "MGI View by Nightmice x ChatGpt"
-headerLabel.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-headerLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-headerLabel.TextSize = 16
-headerLabel.Font = Enum.Font.SourceSansBold
-headerLabel.TextXAlignment = Enum.TextXAlignment.Center
-headerLabel.Parent = frame
+local Theme = {
+    Background = Color3.fromRGB(12, 14, 18),
+    Panel = Color3.fromRGB(18, 22, 30),
+    Accent = Color3.fromRGB(0, 153, 255),
+    AccentAlt = Color3.fromRGB(0, 115, 230),
+    Text = Color3.fromRGB(230, 240, 255),
+    Subtle = Color3.fromRGB(38, 46, 60),
+    Stroke = Color3.fromRGB(25, 35, 55),
+}
 
-local corner = Instance.new("UICorner")
-corner.CornerRadius = UDim.new(0, 9)
-corner.Parent = headerLabel
+local Settings = {
+    OutlineOnly = false,
+    AlwaysOnTop = true,
+    FillTransparency = 0.75,
+    OutlineTransparency = 0,
+    FullBright = false,
+    SpeedEnabled = false,
+    SpeedValue = 16,
+    SpeedLocked = false,
+}
 
-local dragging, dragInput, dragStart, startPos
-frame.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        dragging = true
-        dragStart = input.Position
-        startPos = frame.Position
+local LightingBackup = {
+    Brightness = nil,
+    ClockTime = nil,
+    FogEnd = nil,
+    FogStart = nil,
+    GlobalShadows = nil,
+    OutdoorAmbient = nil,
+    Ambient = nil,
+    ColorShift_Top = nil,
+    ColorShift_Bottom = nil,
+    EnvironmentDiffuseScale = nil,
+    EnvironmentSpecularScale = nil,
+    ShadowSoftness = nil,
+    Technology = nil,
+}
+
+
+local function saveLightingSettings()
+    LightingBackup.Brightness = Lighting.Brightness
+    LightingBackup.ClockTime = Lighting.ClockTime
+    LightingBackup.FogEnd = Lighting.FogEnd
+    LightingBackup.FogStart = Lighting.FogStart
+    LightingBackup.GlobalShadows = Lighting.GlobalShadows
+    LightingBackup.OutdoorAmbient = Lighting.OutdoorAmbient
+    LightingBackup.Ambient = Lighting.Ambient
+    LightingBackup.ColorShift_Top = Lighting.ColorShift_Top
+    LightingBackup.ColorShift_Bottom = Lighting.ColorShift_Bottom
+    LightingBackup.EnvironmentDiffuseScale = Lighting.EnvironmentDiffuseScale
+    LightingBackup.EnvironmentSpecularScale = Lighting.EnvironmentSpecularScale
+    LightingBackup.ShadowSoftness = Lighting.ShadowSoftness
+    LightingBackup.Technology = Lighting.Technology
+end
+
+local function applyFullBright()
+        if LightingBackup.Brightness == nil then
+        saveLightingSettings()
     end
-end)
+    
+        Lighting.Brightness = 3
+    Lighting.ClockTime = 14
+    Lighting.FogEnd = 100000
+    Lighting.FogStart = 0
+    Lighting.GlobalShadows = false
+    Lighting.OutdoorAmbient = Color3.fromRGB(255, 255, 255)
+    Lighting.Ambient = Color3.fromRGB(255, 255, 255)
+    Lighting.ColorShift_Top = Color3.fromRGB(0, 0, 0)
+    Lighting.ColorShift_Bottom = Color3.fromRGB(0, 0, 0)
+    Lighting.EnvironmentDiffuseScale = 1
+    Lighting.EnvironmentSpecularScale = 1
+    Lighting.ShadowSoftness = 0
+    Lighting.Technology = Enum.Technology.Compatibility
+end
 
-frame.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseMovement and dragging then
-        local delta = input.Position - dragStart
-        frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+local function restoreLighting()
+    if LightingBackup.Brightness ~= nil then
+        Lighting.Brightness = LightingBackup.Brightness
+        Lighting.ClockTime = LightingBackup.ClockTime
+        Lighting.FogEnd = LightingBackup.FogEnd
+        Lighting.FogStart = LightingBackup.FogStart
+        Lighting.GlobalShadows = LightingBackup.GlobalShadows
+        Lighting.OutdoorAmbient = LightingBackup.OutdoorAmbient
+        Lighting.Ambient = LightingBackup.Ambient
+        Lighting.ColorShift_Top = LightingBackup.ColorShift_Top
+        Lighting.ColorShift_Bottom = LightingBackup.ColorShift_Bottom
+        Lighting.EnvironmentDiffuseScale = LightingBackup.EnvironmentDiffuseScale
+        Lighting.EnvironmentSpecularScale = LightingBackup.EnvironmentSpecularScale
+        Lighting.ShadowSoftness = LightingBackup.ShadowSoftness
+        Lighting.Technology = LightingBackup.Technology
     end
-end)
+end
 
-frame.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        dragging = false
+local SpeedConnection = nil
+
+local function applySpeed()
+    if SpeedConnection then
+        SpeedConnection:Disconnect()
+        SpeedConnection = nil
     end
-end)
+    
+    if not Settings.SpeedEnabled then return end
+    
+    SpeedConnection = RunService.Heartbeat:Connect(function()
+        local char = LocalPlayer.Character
+        if char then
+            local humanoid = char:FindFirstChild("Humanoid")
+            if humanoid and Settings.SpeedLocked then
+                humanoid.WalkSpeed = Settings.SpeedValue
+            end
+        end
+    end)
+end
 
-local minimizeButton = Instance.new("TextButton")
-minimizeButton.Size = UDim2.new(0, 40, 0, 30)
-minimizeButton.Position = UDim2.new(1, -90, 0, 10)
-minimizeButton.Text = "↓"
-minimizeButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-minimizeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-minimizeButton.TextSize = 20
-minimizeButton.Font = Enum.Font.SourceSansBold
-minimizeButton.Parent = frame
-
-local isMinimized = false
-minimizeButton.MouseButton1Click:Connect(function()
-    if isMinimized then
-        frame.Size = UDim2.new(0, 400, 0, 300)
-        minimizeButton.Text = "↓"
-    else
-        frame.Size = UDim2.new(0, 400, 0, 40)
-        minimizeButton.Text = "↑"
+local function getCurrentSpeed()
+    local char = LocalPlayer.Character
+    if char then
+        local humanoid = char:FindFirstChild("Humanoid")
+        if humanoid then
+            return humanoid.WalkSpeed
+        end
     end
-    isMinimized = not isMinimized
-end)
+    return 16
+end
 
-local closeButton = Instance.new("TextButton")
-closeButton.Size = UDim2.new(0, 40, 0, 30)
-closeButton.Position = UDim2.new(1, -50, 0, 10)
-closeButton.Text = "X"
-closeButton.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
-closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-closeButton.TextSize = 20
-closeButton.Font = Enum.Font.SourceSansBold
-closeButton.Parent = frame
+local function teleportToElevator()
+    local elevators = Workspace:FindFirstChild("Elevators")
+    if not elevators then return false end
+    
+    local elevator = elevators:FindFirstChild("Elevator")
+    if not elevator then return false end
+    
+    local spawnZone = elevator:FindFirstChild("MonsterBlocker")
+    if not spawnZone or not spawnZone:IsA("BasePart") then return false end
+    
+    local char = LocalPlayer.Character
+    if not char then return false end
+    
+    local humanoidRootPart = char:FindFirstChild("HumanoidRootPart")
+    if not humanoidRootPart then return false end
+    
+    humanoidRootPart.CFrame = spawnZone.CFrame + Vector3.new(0, 3, 0)
+    return true
+end
 
-local contentFrame = Instance.new("Frame")
-contentFrame.Size = UDim2.new(1, -20, 1, -50)
-contentFrame.Position = UDim2.new(0, 10, 0, 40)
-contentFrame.BackgroundTransparency = 1
-contentFrame.Name = "ContentFrame"
-contentFrame.Parent = frame
-
-local UIListLayout = Instance.new("UIListLayout")
-UIListLayout.Padding = UDim.new(0, 10)
-UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-UIListLayout.Parent = contentFrame
-
-local minimizeCorner = Instance.new("UICorner")
-minimizeCorner.CornerRadius = UDim.new(0, 12)
-minimizeCorner.Parent = minimizeButton
-
-local closeCorner = Instance.new("UICorner")
-closeCorner.CornerRadius = UDim.new(0, 12)
-closeCorner.Parent = closeButton
-
-local monsterToggle = true
-local generatorToggle = true
-local itemToggle = true
-local playerToggle = true
-
-local HighlightSystem = {
+local Config = {
     Monsters = {
-        Tag = "HLMons",
-        Color = Color3.fromRGB(255, 0, 0),
-        Active = {}
+        tagName = "HL_Monsters",
+        color = Color3.fromRGB(0, 200, 255),
+        folderName = "Monsters",
+        filter = function(obj)
+            return obj:IsA("Model") and obj.Name:match("Monster$")
+        end
     },
     Generators = {
-        Tag = "HLGen",
-        Color = Color3.fromRGB(0, 0, 255),
-        Active = {}
+        tagName = "HL_Generators",
+        color = Color3.fromRGB(0, 120, 255),
+        folderName = "Generators",
+        filter = function(obj)
+            return obj:IsA("Model") or obj:IsA("BasePart")
+        end
     },
     Items = {
-        Tag = "HLItem",
-        Color = Color3.fromRGB(0, 255, 0),
-        Active = {}
+        tagName = "HL_Items",
+        color = Color3.fromRGB(80, 160, 255),
+        folderName = "Items",
+        filter = function(obj)
+            return obj:IsA("Model") or obj:IsA("BasePart")
+        end
     },
     Players = {
-        Tag = "HLPlayer",
-        Color = Color3.fromRGB(255, 255, 0),
-        Active = {}
+        tagName = "HL_Players",
+        color = Color3.fromRGB(120, 100, 255),
+        filter = function(obj)
+            return obj:IsA("Model") and obj:FindFirstChild("Humanoid")
+        end
     }
 }
 
-local FolderWatchers = {
-    Monsters = nil,
-    Generators = nil,
-    Items = nil
+local Toggles = {
+    Monsters = true,
+    Generators = true,
+    Items = true,
+    Players = true,
 }
 
-local function createHighlight(object, highlightType)
-    if object:FindFirstChild(HighlightSystem[highlightType].Tag) then
-        object[HighlightSystem[highlightType].Tag]:Destroy()
+local Active = {
+    Monsters = {},
+    Generators = {},
+    Items = {},
+    Players = {},
+}
+
+local Cleanup = {
+    Monsters = {},
+    Generators = {},
+    Items = {},
+    Players = {},
+}
+
+local RoomConns = {}
+
+local QueueMap = {}
+local QueueList = {}
+
+local function enqueue(inst)
+    if inst and inst.Parent and not QueueMap[inst] then
+        QueueMap[inst] = true
+        table.insert(QueueList, inst)
     end
-    
-    local highlight = Instance.new("Highlight")
-    highlight.Name = HighlightSystem[highlightType].Tag
-    highlight.FillColor = HighlightSystem[highlightType].Color
-    highlight.OutlineColor = HighlightSystem[highlightType].Color
-    highlight.Adornee = object
-    highlight.Parent = object
-    
-    table.insert(HighlightSystem[highlightType].Active, highlight)
-    return highlight
 end
 
-local function clearHighlights(highlightType)
-    for _, highlight in pairs(HighlightSystem[highlightType].Active) do
-        if highlight and highlight.Parent then
-            highlight:Destroy()
+local function disconnectAll(list)
+    for k, v in pairs(list) do
+        if typeof(v) == "RBXScriptConnection" then
+            v:Disconnect()
+        end
+        list[k] = nil
+    end
+end
+
+local function getCurrentRoom()
+    return Workspace:FindFirstChild("CurrentRoom") or Workspace:WaitForChild("CurrentRoom")
+end
+
+local function findTopUnderFolder(inst, folderName)
+    local cr = Workspace:FindFirstChild("CurrentRoom")
+    local cur = inst
+    while cur and cur.Parent do
+        if cur.Parent and cur.Parent.Name == folderName then
+            return cur
+        end
+        if cur == cr then break end
+        cur = cur.Parent
+    end
+    return nil
+end
+
+local function removeHighlight(typeKey, obj)
+    local hl = Active[typeKey][obj]
+    if hl then
+        hl:Destroy()
+    end
+    Active[typeKey][obj] = nil
+    if Cleanup[typeKey][obj] then
+        Cleanup[typeKey][obj]:Disconnect()
+        Cleanup[typeKey][obj] = nil
+    end
+end
+
+local function applySettingsToHighlight(hl)
+    if not hl then return end
+    hl.FillTransparency = Settings.OutlineOnly and 1 or Settings.FillTransparency
+    hl.OutlineTransparency = Settings.OutlineTransparency
+    hl.DepthMode = Settings.AlwaysOnTop and Enum.HighlightDepthMode.AlwaysOnTop or Enum.HighlightDepthMode.Occluded
+end
+
+local function createHighlight(typeKey, obj)
+    if Active[typeKey][obj] then return end
+
+    local cfg = Config[typeKey]
+    local existing = obj:FindFirstChild(cfg.tagName)
+    if existing then
+        existing:Destroy()
+    end
+
+    local hl = Instance.new("Highlight")
+    hl.Name = cfg.tagName
+    hl.FillColor = cfg.color
+    hl.OutlineColor = cfg.color
+    applySettingsToHighlight(hl)
+    hl.Adornee = obj
+    hl.Parent = obj
+
+    Active[typeKey][obj] = hl
+    Cleanup[typeKey][obj] = obj.AncestryChanged:Connect(function(_, parent)
+        if parent == nil then
+            removeHighlight(typeKey, obj)
+        end
+    end)
+end
+
+local function applySettingsToAll()
+    for _, map in pairs(Active) do
+        for _, hl in pairs(map) do
+            applySettingsToHighlight(hl)
         end
     end
-    HighlightSystem[highlightType].Active = {}
+end
+
+local function clearHighlights(typeKey)
+    for obj, _ in pairs(Active[typeKey]) do
+        removeHighlight(typeKey, obj)
+    end
 end
 
 local function clearAllHighlights()
-    for highlightType, _ in pairs(HighlightSystem) do
-        clearHighlights(highlightType)
-    end
-    for watcherType, _ in pairs(FolderWatchers) do
-        if FolderWatchers[watcherType] then
-            FolderWatchers[watcherType]:Disconnect()
-            FolderWatchers[watcherType] = nil
-        end
+    for typeKey, _ in pairs(Active) do
+        clearHighlights(typeKey)
     end
 end
 
-local function setupFolderWatchers()
-    local function createWatcher(folderName, highlightType, extraCondition)
-        local currentRoom = workspace:FindFirstChild("CurrentRoom")
-        if not currentRoom then return end
-        
-        local targetFolder
-        for _, room in pairs(currentRoom:GetChildren()) do
-            if room:IsA("Model") then
-                targetFolder = room:FindFirstChild(folderName)
-                if targetFolder then break end
-            end
+local PlayerConns = {}
+
+local function attachPlayerCharacter(p, character)
+    if not Toggles.Players then return end
+    if character and Config.Players.filter(character) then
+        createHighlight("Players", character)
+    end
+end
+
+local function handlePlayer(p)
+    if PlayerConns[p] then
+        for _, c in ipairs(PlayerConns[p]) do
+            if typeof(c) == "RBXScriptConnection" then c:Disconnect() end
         end
-        
-        if not targetFolder then return end
-        
-        if FolderWatchers[highlightType] then
-            FolderWatchers[highlightType]:Disconnect()
-        end
-        
-        FolderWatchers[highlightType] = targetFolder.ChildAdded:Connect(function(child)
-            wait(0.2)
-            if child:IsA("Model") and (not extraCondition or extraCondition(child)) then
-                if HighlightSystem[highlightType] and HighlightSystem[highlightType].Active ~= nil then
-                    createHighlight(child, highlightType)
-                end
-            end
+        PlayerConns[p] = nil
+    end
+
+    PlayerConns[p] = {}
+
+    table.insert(PlayerConns[p], p.CharacterAdded:Connect(function(char)
+        task.defer(function()
+            attachPlayerCharacter(p, char)
         end)
-    end
+    end))
 
-    if monsterToggle then
-        createWatcher("Monsters", "Monsters", function(obj)
-            return obj.Name:match("Monster$")
-        end)
-    end
-    
-    if generatorToggle then
-        createWatcher("Generators", "Generators")
-    end
-    
-    if itemToggle then
-        createWatcher("Items", "Items")
+    table.insert(PlayerConns[p], p.CharacterRemoving:Connect(function(char)
+        removeHighlight("Players", char)
+    end))
+    if p.Character then
+        attachPlayerCharacter(p, p.Character)
     end
 end
 
-local function highlightObjects(config)
-    clearHighlights(config.highlightType)
-    
-    if not config.toggleActive then
-        if FolderWatchers[config.highlightType] then
-            FolderWatchers[config.highlightType]:Disconnect()
-            FolderWatchers[config.highlightType] = nil
-        end
-        return 
-    end
-
-    local currentRoom = workspace:FindFirstChild("CurrentRoom")
-    if not currentRoom then return end
-
-    for _, room in pairs(currentRoom:GetChildren()) do
-        if room:IsA("Model") then
-            local folder = room:FindFirstChild(config.folderName)
-            if folder then
-                for _, obj in pairs(folder:GetChildren()) do
-                    if obj:IsA("Model") and (not config.extraCondition or config.extraCondition(obj)) then
-                        createHighlight(obj, config.highlightType)
-                    end
-                end
-            end
-        end
-    end
-
-    setupFolderWatchers()
-end
-
-local function highlightPlayers()
+local function initPlayers()
     clearHighlights("Players")
-    
-    if not playerToggle then return end
+    for _, p in ipairs(Players:GetPlayers()) do
+        handlePlayer(p)
+    end
+end
 
-    for _, player in pairs(game.Players:GetPlayers()) do
-        if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-            createHighlight(player.Character, "Players")
+Players.PlayerAdded:Connect(handlePlayer)
+Players.PlayerRemoving:Connect(function(p)
+    if PlayerConns[p] then
+        for _, c in ipairs(PlayerConns[p]) do
+            if typeof(c) == "RBXScriptConnection" then c:Disconnect() end
+        end
+        PlayerConns[p] = nil
+    end
+end)
+
+local function processCandidate(inst)
+    if not inst or not inst.Parent then return end
+    for typeKey, cfg in pairs(Config) do
+        if typeKey ~= "Players" and Toggles[typeKey] then
+            local target = findTopUnderFolder(inst, cfg.folderName)
+            if target and cfg.filter(target) then
+                createHighlight(typeKey, target)
+            end
         end
     end
 end
 
-local function createToggle(name, color, highlightType, callback, initialState)
-    local holder = Instance.new("Frame")
-    holder.Size = UDim2.new(1, 0, 0, 40)
-    holder.BackgroundTransparency = 1
-    holder:SetAttribute("ToggleColor", color)
-    holder.Parent = contentFrame
+local function removeIfActive(inst)
+    for typeKey, map in pairs(Active) do
+        if map[inst] then
+            removeHighlight(typeKey, inst)
+        end
+    end
+end
 
-    local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(0.7, 0, 1, 0)
-    label.BackgroundTransparency = 1
-    label.Text = name
-    label.TextColor3 = Color3.fromRGB(255, 255, 255)
-    label.Font = Enum.Font.SourceSans
-    label.TextSize = 18
-    label.TextXAlignment = Enum.TextXAlignment.Left
-    label.Parent = holder
+local function rescanCurrentRoom()
+    local cr = Workspace:FindFirstChild("CurrentRoom")
+    if not cr then return end
+    for _, inst in ipairs(cr:GetDescendants()) do
+        enqueue(inst)
+    end
+end
 
-    local toggle = Instance.new("Frame")
-    toggle.Size = UDim2.new(0, 60, 0, 24)
-    toggle.Position = UDim2.new(1, -70, 0.5, -12)
-    toggle.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-    toggle.BorderSizePixel = 0
-    toggle.Parent = holder
+local function bindCurrentRoom()
+    disconnectAll(RoomConns)
 
-    local toggleCorner = Instance.new("UICorner")
-    toggleCorner.CornerRadius = UDim.new(0, 12)
-    toggleCorner.Parent = toggle
+    local currentRoom = getCurrentRoom()
+    table.insert(RoomConns, currentRoom.DescendantAdded:Connect(function(inst)
+        enqueue(inst)
+    end))
+    table.insert(RoomConns, currentRoom.DescendantRemoving:Connect(function(inst)
+        removeIfActive(inst)
+        if QueueMap[inst] then
+            QueueMap[inst] = nil
+        end
+    end))
+    table.insert(RoomConns, currentRoom.AncestryChanged:Connect(function(_, parent)
+        if parent == nil then
+            task.defer(bindCurrentRoom)
+        end
+    end))
+    for _, inst in ipairs(currentRoom:GetDescendants()) do
+        enqueue(inst)
+    end
+end
 
-    local knob = Instance.new("Frame")
-    knob.Size = UDim2.new(0, 20, 0, 20)
-    knob.Position = UDim2.new(0, 2, 0, 2)
-    knob.BackgroundColor3 = Color3.fromRGB(200, 200, 200)
-    knob.BorderSizePixel = 0
-    knob.Parent = toggle
+RunService.Heartbeat:Connect(function()
+    local processed = 0
+    local cap = 100
+    while processed < cap and #QueueList > 0 do
+        local inst = table.remove(QueueList, 1)
+        if inst and QueueMap[inst] then
+            QueueMap[inst] = nil
+            processCandidate(inst)
+            processed = processed + 1
+        end
+    end
+end)
 
-    local knobCorner = Instance.new("UICorner")
-    knobCorner.CornerRadius = UDim.new(1, 0)
-    knobCorner.Parent = knob
+local function buildUI()
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "MGIViewGUI"
+    screenGui.IgnoreGuiInset = true
+    screenGui.ResetOnSpawn = false
+    screenGui.Parent = PlayerGui
 
-    local enabled = initialState
-    if enabled then
-        knob.Position = UDim2.new(1, -22, 0, 2)
-        knob.BackgroundColor3 = color
+    local frame = Instance.new("Frame")
+    frame.Name = "MainFrame"
+    frame.Size = UDim2.new(0, 420, 0, 48) -- Altura inicial apenas para o header
+    frame.Position = UDim2.new(0.5, -210, 0.5, -240)
+    frame.BackgroundColor3 = Theme.Background
+    frame.BorderSizePixel = 0
+    frame.ClipsDescendants = true
+    frame.Parent = screenGui
+
+    local frameCorner = Instance.new("UICorner")
+    frameCorner.CornerRadius = UDim.new(0, 12)
+    frameCorner.Parent = frame
+
+    local frameStroke = Instance.new("UIStroke")
+    frameStroke.Thickness = 1
+    frameStroke.Color = Theme.Stroke
+    frameStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    frameStroke.Parent = frame
+
+    local header = Instance.new("Frame")
+    header.Name = "Header"
+    header.Size = UDim2.new(1, 0, 0, 44)
+    header.BackgroundColor3 = Theme.Panel
+    header.Parent = frame
+
+    local headerCorner = Instance.new("UICorner")
+    headerCorner.CornerRadius = UDim.new(0, 12)
+    headerCorner.Parent = header
+
+    local headerStroke = Instance.new("UIStroke")
+    headerStroke.Thickness = 1
+    headerStroke.Color = Theme.Stroke
+    headerStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    headerStroke.Parent = header
+
+    local grad = Instance.new("UIGradient")
+    grad.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Theme.Panel),
+        ColorSequenceKeypoint.new(1, Theme.Background)
+    })
+    grad.Rotation = 90
+    grad.Parent = header
+
+    local title = Instance.new("TextLabel")
+    title.Name = "Title"
+    title.BackgroundTransparency = 1
+    title.Position = UDim2.new(0, 12, 0, 0)
+    title.Size = UDim2.new(1, -180, 1, 0)
+    title.Font = Enum.Font.GothamBold
+    title.Text = "MGPI Viewer by Nightmice"
+    title.TextColor3 = Theme.Text
+    title.TextSize = 18
+    title.TextXAlignment = Enum.TextXAlignment.Left
+    title.Parent = header
+
+    local controls = Instance.new("Frame")
+    controls.Name = "Controls"
+    controls.BackgroundTransparency = 1
+    controls.Size = UDim2.new(0, 160, 1, 0)
+    controls.Position = UDim2.new(1, -162, 0, 0)
+    controls.Parent = header
+
+    local controlLayout = Instance.new("UIListLayout")
+    controlLayout.FillDirection = Enum.FillDirection.Horizontal
+    controlLayout.HorizontalAlignment = Enum.HorizontalAlignment.Right
+    controlLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+    controlLayout.Padding = UDim.new(0, 8)
+    controlLayout.Parent = controls
+
+    local function makeButton(txt, bg)
+        local b = Instance.new("TextButton")
+        b.Size = UDim2.new(0, 36, 0, 28)
+        b.BackgroundColor3 = bg
+        b.Text = txt
+        b.TextColor3 = Theme.Text
+        b.Font = Enum.Font.GothamBold
+        b.TextSize = 18
+        b.AutoButtonColor = false
+        b.Parent = controls
+
+        local c = Instance.new("UICorner")
+        c.CornerRadius = UDim.new(0, 8)
+        c.Parent = b
+
+        local s = Instance.new("UIStroke")
+        s.Thickness = 1
+        s.Color = Theme.Stroke
+        s.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+        s.Parent = b
+
+        return b
     end
 
-    toggle.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+    local refreshBtn = makeButton("R", Theme.Subtle)
+    local minimizeBtn = makeButton("_", Theme.Subtle)
+    local closeBtn = makeButton("X", Color3.fromRGB(185, 40, 40))
+
+        local content = Instance.new("Frame")
+    content.Name = "Content"
+    content.Size = UDim2.new(1, -24, 1, -72) -- Ocupa o espaço restante
+    content.Position = UDim2.new(0, 12, 0, 60)
+    content.BackgroundColor3 = Theme.Panel
+    content.Parent = frame
+        local contentCorner = Instance.new("UICorner")
+    contentCorner.CornerRadius = UDim.new(0, 10)
+    contentCorner.Parent = content
+
+    local contentStroke = Instance.new("UIStroke")
+    contentStroke.Thickness = 1
+    contentStroke.Color = Theme.Stroke
+    contentStroke.Parent = content
+
+    local scrolling = Instance.new("ScrollingFrame")
+    scrolling.Name = "Scroll"
+    scrolling.Size = UDim2.fromScale(1, 1)
+    -- scrolling.AutomaticSize = Enum.AutomaticSize.Y -- Removido para controle manual do CanvasSize
+    scrolling.BackgroundTransparency = 1
+    scrolling.BorderSizePixel = 0
+    scrolling.ScrollBarThickness = 4
+    scrolling.ScrollBarImageColor3 = Theme.Accent
+    scrolling.Parent = content
+
+    local list = Instance.new("UIListLayout")
+    list.Padding = UDim.new(0, 8)
+    list.FillDirection = Enum.FillDirection.Vertical
+    list.SortOrder = Enum.SortOrder.LayoutOrder
+    list.Parent = scrolling
+
+    local padding = Instance.new("UIPadding")
+    padding.PaddingTop = UDim.new(0, 24)
+    padding.PaddingBottom = UDim.new(0, 24)
+    padding.PaddingLeft = UDim.new(0, 24)
+    padding.PaddingRight = UDim.new(0, 24)
+    padding.Parent = scrolling
+
+    list:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        scrolling.CanvasSize = UDim2.new(0, 0, 0, list.AbsoluteContentSize.Y + padding.PaddingTop.Offset + padding.PaddingBottom.Offset + 24)
+    end)
+
+    local function tween(obj, goal, time)
+        TweenService:Create(obj, TweenInfo.new(time, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), goal):Play()
+    end
+
+        do
+        local dragging = false
+        local dragStart, startPos
+        header.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                dragging = true
+                dragStart = input.Position
+                startPos = frame.Position
+            end
+        end)
+        header.InputChanged:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseMovement and dragging then
+                local delta = input.Position - dragStart
+                frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+            end
+        end)
+        header.InputEnded:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                dragging = false
+            end
+        end)
+    end
+
+    do -- Lógica de redimensionamento vertical
+        local UserInputService = game:GetService("UserInputService")
+        local resizing = false
+        local resizeStart, startSize
+        local minHeight = 150
+
+        local resizeHandle = Instance.new("Frame")
+        resizeHandle.Name = "ResizeHandle"
+        resizeHandle.Size = UDim2.new(1, 0, 0, 10)
+        resizeHandle.Position = UDim2.new(0, 0, 1, -10)
+        resizeHandle.BackgroundTransparency = 1
+        resizeHandle.ZIndex = 2 -- Garante que a alça fique sobre outros elementos
+        resizeHandle.Parent = frame
+
+        local grabberIcon = Instance.new("TextLabel")
+        grabberIcon.Name = "GrabberIcon"
+        grabberIcon.Size = UDim2.new(0, 60, 0, 10) -- Mais largo
+        grabberIcon.Position = UDim2.new(0.5, -30, 1, -12) -- Centralizado
+        grabberIcon.BackgroundTransparency = 1
+        grabberIcon.Font = Enum.Font.SourceSansBold
+        grabberIcon.Text = "• • •"
+        grabberIcon.TextColor3 = Theme.Subtle
+        grabberIcon.TextSize = 16
+        grabberIcon.ZIndex = 3
+        grabberIcon.Parent = frame
+
+        resizeHandle.MouseEnter:Connect(function()
+            UserInputService.MouseIcon = "rbxassetid://10495491134" -- Cursor de redimensionamento vertical
+            tween(grabberIcon, {TextColor3 = Theme.Accent}, 0.15)
+        end)
+        resizeHandle.MouseLeave:Connect(function()
+            if not resizing then UserInputService.MouseIcon = "" end
+            tween(grabberIcon, {TextColor3 = Theme.Subtle}, 0.15)
+        end)
+
+        resizeHandle.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                resizing = true
+                resizeStart = input.Position
+                startSize = frame.AbsoluteSize
+                -- Desativa o ajuste automático de altura do content para evitar conflitos
+                content.AutomaticSize = Enum.AutomaticSize.None
+            end
+        end)
+
+        UserInputService.InputChanged:Connect(function(input)
+            if resizing and input.UserInputType == Enum.UserInputType.MouseMovement then
+                local delta = input.Position - resizeStart
+                local newHeight = math.max(minHeight, startSize.Y + delta.Y)
+                frame.Size = UDim2.new(0, frame.AbsoluteSize.X, 0, newHeight)
+            end
+        end)
+
+        UserInputService.InputEnded:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 and resizing then
+                resizing = false
+                UserInputService.MouseIcon = "" -- Garante que o cursor volte ao normal
+            end
+        end)
+    end
+
+        local function createToggle(labelText, color, initialState, onChanged, parentContainer)
+        local row = Instance.new("Frame")
+        row.BackgroundColor3 = Theme.Background
+        row.BorderSizePixel = 0
+        row.Size = UDim2.new(1, -8, 0, 40)
+        row.Parent = parentContainer or scrolling
+
+        local rowCorner = Instance.new("UICorner")
+        rowCorner.CornerRadius = UDim.new(0, 8)
+        rowCorner.Parent = row
+
+        local rowStroke = Instance.new("UIStroke")
+        rowStroke.Thickness = 1
+        rowStroke.Color = Theme.Stroke
+        rowStroke.Parent = row
+
+        local label = Instance.new("TextLabel")
+        label.BackgroundTransparency = 1
+        label.Size = UDim2.new(1, -90, 1, 0)
+        label.Position = UDim2.new(0, 10, 0, 0)
+        label.Text = labelText
+        label.Font = Enum.Font.Gotham
+        label.TextSize = 16
+        label.TextXAlignment = Enum.TextXAlignment.Left
+        label.TextColor3 = Theme.Text
+        label.Parent = row
+
+        local switch = Instance.new("TextButton")
+        switch.Size = UDim2.new(0, 64, 0, 26)
+        switch.Position = UDim2.new(1, -74, 0.5, -13)
+        switch.BackgroundColor3 = Theme.Subtle
+        switch.Text = ""
+        switch.AutoButtonColor = false
+        switch.Parent = row
+
+        local switchCorner = Instance.new("UICorner")
+        switchCorner.CornerRadius = UDim.new(0, 13)
+        switchCorner.Parent = switch
+
+        local knob = Instance.new("Frame")
+        knob.Size = UDim2.new(0, 22, 0, 22)
+        knob.Position = initialState and UDim2.new(1, -24, 0, 2) or UDim2.new(0, 2, 0, 2)
+        if initialState then
+            knob.BackgroundColor3 = color
+        else
+            knob.BackgroundColor3 = Theme.Text
+        end
+        knob.Parent = switch
+
+        local knobCorner = Instance.new("UICorner")
+        knobCorner.CornerRadius = UDim.new(1, 0)
+        knobCorner.Parent = knob
+
+        local knobStroke = Instance.new("UIStroke")
+        knobStroke.Thickness = 1
+        knobStroke.Color = Theme.Stroke
+        knobStroke.Parent = knob
+
+        local enabled = initialState
+        local function render()
+            tween(knob, {Position = enabled and UDim2.new(1, -24, 0, 2) or UDim2.new(0, 2, 0, 2)}, 0.15)
+            knob.BackgroundColor3 = enabled and color or Theme.Text
+            switch.BackgroundColor3 = enabled and Theme.AccentAlt or Theme.Subtle
+        end
+        render()
+
+        switch.MouseButton1Click:Connect(function()
             enabled = not enabled
-            knob:TweenPosition(
-                enabled and UDim2.new(1, -22, 0, 2) or UDim2.new(0, 2, 0, 2),
-                "Out", "Quad", 0.2, true
-            )
-            knob.BackgroundColor3 = enabled and color or Color3.fromRGB(200, 200, 200)
-            callback(enabled)
-        end
-    end)
-    
-    return holder
-end
+            render()
+            onChanged(enabled)
+        end)
 
-closeButton.MouseButton1Click:Connect(function()
-    clearAllHighlights()
-    screenGui:Destroy()
-end)
-
-local function setupRoomConnections()
-    local currentRoom = workspace:FindFirstChild("CurrentRoom") or workspace:WaitForChild("CurrentRoom")
-    
-    currentRoom.ChildAdded:Connect(function(room)
-        if room:IsA("Model") then
-            wait(0.5)
-            setupFolderWatchers()
-            
-            if monsterToggle then
-                highlightObjects({
-                    folderName = "Monsters",
-                    highlightType = "Monsters",
-                    toggleActive = true,
-                    extraCondition = function(obj)
-                        return obj.Name:match("Monster$")
-                    end
-                })
-            end
-            
-            if generatorToggle then
-                highlightObjects({
-                    folderName = "Generators",
-                    highlightType = "Generators",
-                    toggleActive = true
-                })
-            end
-            
-            if itemToggle then
-                highlightObjects({
-                    folderName = "Items",
-                    highlightType = "Items",
-                    toggleActive = true
-                })
-            end
-        end
-    end)
-    
-    setupFolderWatchers()
-end
-
-game.Players.PlayerAdded:Connect(function(player)
-    player.CharacterAdded:Connect(function(character)
-        wait(0.5)
-        if playerToggle then
-            highlightPlayers()
-        end
-    end)
-end)
-
-game.Players.PlayerRemoving:Connect(function()
-    if playerToggle then
-        highlightPlayers()
+        return row
     end
-end)
 
-local masterToggleHolder = createToggle("TODOS", Color3.fromRGB(255, 165, 0), "All", function(state)
-    monsterToggle = state
-    generatorToggle = state
-    itemToggle = state
-    playerToggle = state
+        local function createSection(titleText)
+        local headerRow = Instance.new("Frame")
+        headerRow.BackgroundColor3 = Theme.Background
+        headerRow.BorderSizePixel = 0
+        headerRow.Size = UDim2.new(1, -8, 0, 36)
+        headerRow.Parent = scrolling
 
-    for _, child in ipairs(contentFrame:GetChildren()) do
-        if child:IsA("Frame") and child ~= masterToggleHolder then
-            local toggle = child:FindFirstChildOfClass("Frame")
-            if toggle then
-                local knob = toggle:FindFirstChildOfClass("Frame")
-                if knob then
-                    knob:TweenPosition(
-                        state and UDim2.new(1, -22, 0, 2) or UDim2.new(0, 2, 0, 2),
-                        "Out", "Quad", 0.2, true
-                    )
-                    knob.BackgroundColor3 = state and child:GetAttribute("ToggleColor") or Color3.fromRGB(200, 200, 200)
+        local headerCorner = Instance.new("UICorner")
+        headerCorner.CornerRadius = UDim.new(0, 8)
+        headerCorner.Parent = headerRow
+
+        local headerStroke = Instance.new("UIStroke")
+        headerStroke.Thickness = 1
+        headerStroke.Color = Theme.Stroke
+        headerStroke.Parent = headerRow
+
+        local label = Instance.new("TextButton")
+        label.BackgroundTransparency = 1
+        label.Size = UDim2.new(1, -30, 1, 0)
+        label.Position = UDim2.new(0, 10, 0, 0)
+        label.Text = titleText
+        label.Font = Enum.Font.GothamBold
+        label.TextSize = 16
+        label.TextXAlignment = Enum.TextXAlignment.Left
+        label.TextColor3 = Theme.Text
+        label.AutoButtonColor = false
+        label.Parent = headerRow
+
+        local arrow = Instance.new("TextLabel")
+        arrow.BackgroundTransparency = 1
+        arrow.Size = UDim2.new(0, 20, 1, 0)
+        arrow.Position = UDim2.new(1, -24, 0, 0)
+        arrow.Text = "▶"
+        arrow.Font = Enum.Font.GothamBold
+        arrow.TextSize = 16
+        arrow.TextColor3 = Theme.Text
+        arrow.Parent = headerRow
+
+        local container = Instance.new("Frame")
+        container.BackgroundTransparency = 1
+        container.Size = UDim2.new(1, -8, 0, 0)
+        container.AutomaticSize = Enum.AutomaticSize.Y
+        container.Visible = false
+        container.Parent = scrolling
+
+        local containerLayout = Instance.new("UIListLayout")
+        containerLayout.Padding = UDim.new(0, 8)
+        containerLayout.FillDirection = Enum.FillDirection.Vertical
+        containerLayout.SortOrder = Enum.SortOrder.LayoutOrder
+        containerLayout.Parent = container
+
+        local expanded = false
+        local function toggle()
+            expanded = not expanded
+            container.Visible = expanded
+            arrow.Text = expanded and "▼" or "▶"
+        end
+
+        label.MouseButton1Click:Connect(toggle)
+
+        return container, toggle
+    end
+
+    local function showNotification(text, duration)
+        duration = duration or 1.5
+        local notif = Instance.new("TextLabel")
+        notif.Name = "Notification"
+        notif.Size = UDim2.new(1, 0, 0, 30)
+        notif.Position = UDim2.new(0, 0, 0, -30)
+        notif.BackgroundColor3 = Theme.AccentAlt
+        notif.Text = text
+        notif.Font = Enum.Font.Gotham
+        notif.TextSize = 14
+        notif.TextColor3 = Theme.Text
+        notif.Parent = frame
+
+        local corner = Instance.new("UICorner")
+        corner.CornerRadius = UDim.new(0, 8)
+        corner.Parent = notif
+
+        tween(notif, {Position = UDim2.new(0, 0, 0, 8)}, 0.2)
+        task.wait(duration)
+        tween(notif, {Position = UDim2.new(0, 0, 0, -30)}, 0.2)
+        task.wait(0.2)
+        notif:Destroy()
+    end
+
+    local minimized = false
+    local expandedHeight = 450 -- Altura inicial padrão
+    frame.Size = UDim2.new(0, 420, 0, expandedHeight)
+
+    minimizeBtn.MouseButton1Click:Connect(function()
+        minimized = not minimized
+        if minimized then
+            -- Salvar a altura expandida antes de minimizar
+            expandedHeight = frame.AbsoluteSize.Y
+            content.Visible = false
+            tween(frame, {Size = UDim2.new(0, 420, 0, 48)}, 0.2)
+            minimizeBtn.Text = "□"
+        else
+            content.Visible = true
+            -- Restaurar a altura expandida
+            -- Garante que a altura restaurada não seja menor que a mínima
+            if expandedHeight <= 48 then
+                expandedHeight = 450 -- Restaura para a altura padrão se algo der errado
+            end
+            tween(frame, {Size = UDim2.new(0, 420, 0, expandedHeight)}, 0.2)
+            minimizeBtn.Text = "_"
+        end
+    end)
+
+    refreshBtn.MouseButton1Click:Connect(function()
+        rescanCurrentRoom()
+        showNotification("Forçando atualização...", 1)
+    end)
+
+    closeBtn.MouseButton1Click:Connect(function()
+        clearAllHighlights()
+        disconnectAll(RoomConns)
+        for _, pc in pairs(PlayerConns) do
+            for _, c in ipairs(pc) do
+                if typeof(c) == "RBXScriptConnection" then c:Disconnect() end
+            end
+        end
+        if Settings.FullBright then
+            restoreLighting()
+        end
+        if SpeedConnection then
+            SpeedConnection:Disconnect()
+        end
+        screenGui:Destroy()
+    end)
+
+    do
+        local container, _ = createSection("Visibilidade")
+
+        local function setAll(state)
+            for k, _ in pairs(Toggles) do
+                Toggles[k] = state
+            end
+            if state then
+                bindCurrentRoom()
+                initPlayers()
+            else
+                clearAllHighlights()
+            end
+        end
+
+        createToggle("Todos", Theme.Accent, true, function(state)
+            setAll(state)
+            -- NOTE: This doesn't update the other toggles visually. A more complex setup would be needed for that.
+        end, container)
+
+        createToggle("Monstros", Config.Monsters.color, Toggles.Monsters, function(state)
+            Toggles.Monsters = state
+            if not state then
+                clearHighlights("Monsters")
+            else
+                rescanCurrentRoom()
+            end
+        end, container)
+
+        createToggle("Geradores", Config.Generators.color, Toggles.Generators, function(state)
+            Toggles.Generators = state
+            if not state then
+                clearHighlights("Generators")
+            else
+                rescanCurrentRoom()
+            end
+        end, container)
+
+        createToggle("Itens", Config.Items.color, Toggles.Items, function(state)
+            Toggles.Items = state
+            if not state then
+                clearHighlights("Items")
+            else
+                rescanCurrentRoom()
+            end
+        end, container)
+
+        createToggle("Jogadores", Config.Players.color, Toggles.Players, function(state)
+            Toggles.Players = state
+            if not state then
+                clearHighlights("Players")
+            else
+                initPlayers()
+            end
+        end, container)
+    end
+
+        do
+        local container, _ = createSection("Configurações Extras")
+
+        createToggle("Iluminação total", Theme.Accent, Settings.FullBright, function(state)
+            Settings.FullBright = state
+            if state then
+                applyFullBright()
+            else
+                restoreLighting()
+            end
+        end, container)
+
+        createToggle("Somente contorno", Theme.Accent, Settings.OutlineOnly, function(state)
+            Settings.OutlineOnly = state
+            applySettingsToAll()
+        end, container)
+
+        createToggle("Sempre no topo", Theme.Accent, Settings.AlwaysOnTop, function(state)
+            Settings.AlwaysOnTop = state
+            applySettingsToAll()
+        end, container)
+    end
+
+    do
+        local container, _ = createSection("Velocidade")
+
+        local speedRow = Instance.new("Frame")
+        speedRow.BackgroundColor3 = Theme.Background
+        speedRow.BorderSizePixel = 0
+        speedRow.Size = UDim2.new(1, -8, 0, 100)
+        speedRow.Parent = container
+
+        local speedCorner = Instance.new("UICorner")
+        speedCorner.CornerRadius = UDim.new(0, 8)
+        speedCorner.Parent = speedRow
+
+        local speedStroke = Instance.new("UIStroke")
+        speedStroke.Thickness = 1
+        speedStroke.Color = Theme.Stroke
+        speedStroke.Parent = speedRow
+
+        local speedLabel = Instance.new("TextLabel")
+        speedLabel.BackgroundTransparency = 1
+        speedLabel.Size = UDim2.new(0.5, -10, 0, 20)
+        speedLabel.Position = UDim2.new(0, 10, 0, 10)
+        speedLabel.Text = "Velocidade:"
+        speedLabel.Font = Enum.Font.Gotham
+        speedLabel.TextSize = 14
+        speedLabel.TextXAlignment = Enum.TextXAlignment.Left
+        speedLabel.TextColor3 = Theme.Text
+        speedLabel.Parent = speedRow
+
+        local speedDisplay = Instance.new("TextLabel")
+        speedDisplay.BackgroundColor3 = Theme.Panel
+        speedDisplay.Size = UDim2.new(0, 80, 0, 24)
+        speedDisplay.Position = UDim2.new(1, -90, 0, 8)
+        speedDisplay.Text = tostring(Settings.SpeedValue)
+        speedDisplay.Font = Enum.Font.GothamBold
+        speedDisplay.TextSize = 16
+        speedDisplay.TextColor3 = Theme.Accent
+        speedDisplay.Parent = speedRow
+
+        local displayCorner = Instance.new("UICorner")
+        displayCorner.CornerRadius = UDim.new(0, 6)
+        displayCorner.Parent = speedDisplay
+
+        local displayStroke = Instance.new("UIStroke")
+        displayStroke.Thickness = 1
+        displayStroke.Color = Theme.Stroke
+        displayStroke.Parent = speedDisplay
+
+        local sliderBg = Instance.new("Frame")
+        sliderBg.BackgroundColor3 = Theme.Subtle
+        sliderBg.Size = UDim2.new(1, -20, 0, 6)
+        sliderBg.Position = UDim2.new(0, 10, 0, 45)
+        sliderBg.Parent = speedRow
+
+        local sliderBgCorner = Instance.new("UICorner")
+        sliderBgCorner.CornerRadius = UDim.new(1, 0)
+        sliderBgCorner.Parent = sliderBg
+
+        local sliderFill = Instance.new("Frame")
+        sliderFill.BackgroundColor3 = Theme.Accent
+        sliderFill.Size = UDim2.new(0, 0, 1, 0)
+        sliderFill.Parent = sliderBg
+
+        local sliderFillCorner = Instance.new("UICorner")
+        sliderFillCorner.CornerRadius = UDim.new(1, 0)
+        sliderFillCorner.Parent = sliderFill
+
+        local sliderKnob = Instance.new("Frame")
+        sliderKnob.BackgroundColor3 = Theme.Accent
+        sliderKnob.Size = UDim2.new(0, 18, 0, 18)
+        sliderKnob.Position = UDim2.new(0, -9, 0.5, -9)
+        sliderKnob.Parent = sliderBg
+
+        local knobCorner = Instance.new("UICorner")
+        knobCorner.CornerRadius = UDim.new(1, 0)
+        knobCorner.Parent = sliderKnob
+
+        local knobStroke = Instance.new("UIStroke")
+        knobStroke.Thickness = 2
+        knobStroke.Color = Theme.Stroke
+        knobStroke.Parent = sliderKnob
+
+        local minLabel = Instance.new("TextLabel")
+        minLabel.BackgroundTransparency = 1
+        minLabel.Size = UDim2.new(0, 30, 0, 20)
+        minLabel.Position = UDim2.new(0, 10, 0, 55)
+        minLabel.Text = "16"
+        minLabel.Font = Enum.Font.Gotham
+        minLabel.TextSize = 12
+        minLabel.TextColor3 = Theme.Text
+        minLabel.TextXAlignment = Enum.TextXAlignment.Left
+        minLabel.Parent = speedRow
+
+        local maxLabel = Instance.new("TextLabel")
+        maxLabel.BackgroundTransparency = 1
+        maxLabel.Size = UDim2.new(0, 30, 0, 20)
+        maxLabel.Position = UDim2.new(1, -40, 0, 55)
+        maxLabel.Text = "100"
+        maxLabel.Font = Enum.Font.Gotham
+        maxLabel.TextSize = 12
+        maxLabel.TextColor3 = Theme.Text
+        maxLabel.TextXAlignment = Enum.TextXAlignment.Right
+        maxLabel.Parent = speedRow
+
+        local lockBtn = Instance.new("TextButton")
+        lockBtn.Size = UDim2.new(0, 80, 0, 24)
+        lockBtn.Position = UDim2.new(0, 10, 1, -32)
+        lockBtn.BackgroundColor3 = Theme.Subtle
+        lockBtn.Text = "Travar"
+        lockBtn.TextColor3 = Theme.Text
+        lockBtn.Font = Enum.Font.GothamBold
+        lockBtn.TextSize = 12
+        lockBtn.AutoButtonColor = false
+        lockBtn.Parent = speedRow
+
+        local lockCorner = Instance.new("UICorner")
+        lockCorner.CornerRadius = UDim.new(0, 6)
+        lockCorner.Parent = lockBtn
+
+        local lockStroke = Instance.new("UIStroke")
+        lockStroke.Thickness = 1
+        lockStroke.Color = Theme.Stroke
+        lockStroke.Parent = lockBtn
+
+        local function updateSlider(value)
+            local percent = (value - 16) / (100 - 16)
+            sliderKnob.Position = UDim2.new(percent, -9, 0.5, -9)
+            sliderFill.Size = UDim2.new(percent, 0, 1, 0)
+            speedDisplay.Text = tostring(math.floor(value))
+            Settings.SpeedValue = value
+            
+            if Settings.SpeedEnabled and Settings.SpeedLocked then
+                local char = LocalPlayer.Character
+                if char then
+                    local humanoid = char:FindFirstChild("Humanoid")
+                    if humanoid then
+                        humanoid.WalkSpeed = value
+                    end
                 end
             end
         end
+
+        local dragging = false
+        sliderKnob.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                dragging = true
+            end
+        end)
+
+        sliderKnob.InputEnded:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                dragging = false
+            end
+        end)
+
+        sliderBg.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                dragging = true
+                local pos = (input.Position.X - sliderBg.AbsolutePosition.X) / sliderBg.AbsoluteSize.X
+                pos = math.clamp(pos, 0, 1)
+                local value = 16 + (pos * (100 - 16))
+                updateSlider(value)
+            end
+        end)
+
+        game:GetService("UserInputService").InputChanged:Connect(function(input)
+            if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+                local pos = (input.Position.X - sliderBg.AbsolutePosition.X) / sliderBg.AbsoluteSize.X
+                pos = math.clamp(pos, 0, 1)
+                local value = 16 + (pos * (100 - 16))
+                updateSlider(value)
+            end
+        end)
+
+        game:GetService("UserInputService").InputEnded:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                dragging = false
+            end
+        end)
+
+        lockBtn.MouseButton1Click:Connect(function()
+            Settings.SpeedLocked = not Settings.SpeedLocked
+            if Settings.SpeedLocked then
+                lockBtn.Text = "Travado"
+                lockBtn.BackgroundColor3 = Theme.AccentAlt
+            else
+                lockBtn.Text = "Travar"
+                lockBtn.BackgroundColor3 = Theme.Subtle
+            end
+            applySpeed()
+        end)
+
+        RunService.Heartbeat:Connect(function()
+            if Settings.SpeedEnabled and not Settings.SpeedLocked then
+                local currentSpeed = getCurrentSpeed()
+                speedDisplay.Text = tostring(math.floor(currentSpeed))
+            end
+        end)
+
+        updateSlider(Settings.SpeedValue)
+
+        createToggle("Ativar corrida", Theme.Accent, Settings.SpeedEnabled, function(state)
+            Settings.SpeedEnabled = state
+            if state then
+                applySpeed()
+            else
+                if SpeedConnection then
+                    SpeedConnection:Disconnect()
+                    SpeedConnection = nil
+                end
+            end
+        end, container)
     end
 
-    highlightObjects({
-        folderName = "Monsters",
-        highlightType = "Monsters",
-        toggleActive = state,
-        extraCondition = function(obj)
-            return obj.Name:match("Monster$")
-        end
-    })
+    do
+        local container, _ = createSection("GTE")
 
-    highlightObjects({
-        folderName = "Generators",
-        highlightType = "Generators",
-        toggleActive = state
-    })
+        local gteRow = Instance.new("Frame")
+        gteRow.BackgroundColor3 = Theme.Background
+        gteRow.BorderSizePixel = 0
+        gteRow.Size = UDim2.new(1, -8, 0, 60)
+        gteRow.Parent = container
 
-    highlightObjects({
-        folderName = "Items",
-        highlightType = "Items",
-        toggleActive = state
-    })
+        local gteCorner = Instance.new("UICorner")
+        gteCorner.CornerRadius = UDim.new(0, 8)
+        gteCorner.Parent = gteRow
 
-    if state then
-        highlightPlayers()
-    else
-        clearHighlights("Players")
+        local gteStroke = Instance.new("UIStroke")
+        gteStroke.Thickness = 1
+        gteStroke.Color = Theme.Stroke
+        gteStroke.Parent = gteRow
+
+        local gteLabel = Instance.new("TextLabel")
+        gteLabel.BackgroundTransparency = 1
+        gteLabel.Size = UDim2.new(1, -20, 0, 20)
+        gteLabel.Position = UDim2.new(0, 10, 0, 8)
+        gteLabel.Text = "Teleportar para Elevador"
+        gteLabel.Font = Enum.Font.Gotham
+        gteLabel.TextSize = 14
+        gteLabel.TextXAlignment = Enum.TextXAlignment.Left
+        gteLabel.TextColor3 = Theme.Text
+        gteLabel.Parent = gteRow
+
+        local gteBtn = Instance.new("TextButton")
+        gteBtn.Size = UDim2.new(1, -20, 0, 28)
+        gteBtn.Position = UDim2.new(0, 10, 1, -36)
+        gteBtn.BackgroundColor3 = Theme.Accent
+        gteBtn.Text = "Teleportar"
+        gteBtn.TextColor3 = Theme.Text
+        gteBtn.Font = Enum.Font.GothamBold
+        gteBtn.TextSize = 14
+        gteBtn.AutoButtonColor = false
+        gteBtn.Parent = gteRow
+
+        local gteBtnCorner = Instance.new("UICorner")
+        gteBtnCorner.CornerRadius = UDim.new(0, 6)
+        gteBtnCorner.Parent = gteBtn
+
+        local gteBtnStroke = Instance.new("UIStroke")
+        gteBtnStroke.Thickness = 1
+        gteBtnStroke.Color = Theme.Stroke
+        gteBtnStroke.Parent = gteBtn
+
+        gteBtn.MouseButton1Click:Connect(function()
+            local success = teleportToElevator()
+            if success then
+                gteBtn.Text = "Teleportado!"
+                gteBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
+                task.wait(1)
+                gteBtn.Text = "Teleportar"
+                gteBtn.BackgroundColor3 = Theme.Accent
+            else
+                gteBtn.Text = "Elevador não encontrado"
+                gteBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+                task.wait(1.5)
+                gteBtn.Text = "Teleportar"
+                gteBtn.BackgroundColor3 = Theme.Accent
+            end
+        end)
+
+        gteBtn.MouseEnter:Connect(function()
+            if gteBtn.Text == "Teleportar" then
+                tween(gteBtn, {BackgroundColor3 = Theme.AccentAlt}, 0.15)
+            end
+        end)
+
+        gteBtn.MouseLeave:Connect(function()
+            if gteBtn.Text == "Teleportar" then
+                tween(gteBtn, {BackgroundColor3 = Theme.Accent}, 0.15)
+            end
+        end)
     end
-end, true)
 
-createToggle("Monstros", Color3.fromRGB(255, 0, 0), "Monsters", function(state)
-    monsterToggle = state
-    highlightObjects({
-        folderName = "Monsters",
-        highlightType = "Monsters",
-        toggleActive = state,
-        extraCondition = function(obj)
-            return obj.Name:match("Monster$")
-        end
-    })
-end, monsterToggle)
+    return screenGui
+end
 
-createToggle("Geradores", Color3.fromRGB(0, 0, 255), "Generators", function(state)
-    generatorToggle = state
-    highlightObjects({
-        folderName = "Generators",
-        highlightType = "Generators",
-        toggleActive = state
-    })
-end, generatorToggle)
+local gui = buildUI()
 
-createToggle("Itens", Color3.fromRGB(0, 255, 0), "Items", function(state)
-    itemToggle = state
-    highlightObjects({
-        folderName = "Items",
-        highlightType = "Items",
-        toggleActive = state
-    })
-end, itemToggle)
-
-createToggle("Jogadores", Color3.fromRGB(255, 255, 0), "Players", function(state)
-    playerToggle = state
-    if state then
-        highlightPlayers()
-    else
-        clearHighlights("Players")
-    end
-end, playerToggle)
-
-spawn(function()
-    setupRoomConnections()
-    
-    highlightObjects({
-        folderName = "Monsters",
-        highlightType = "Monsters",
-        toggleActive = monsterToggle,
-        extraCondition = function(obj)
-            return obj.Name:match("Monster$")
-        end
-    })
-
-    highlightObjects({
-        folderName = "Generators",
-        highlightType = "Generators",
-        toggleActive = generatorToggle
-    })
-
-    highlightObjects({
-        folderName = "Items",
-        highlightType = "Items",
-        toggleActive = itemToggle
-    })
-
-    highlightPlayers()
-end)
+bindCurrentRoom()
+initPlayers()
