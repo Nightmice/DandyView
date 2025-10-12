@@ -160,7 +160,7 @@ end
 local Config = {
     Monsters = {
         tagName = "HL_Monsters",
-        color = Color3.fromRGB(0, 200, 255),
+        color = Color3.fromRGB(255, 40, 40),
         folderName = "Monsters",
         filter = function(obj)
             return obj:IsA("Model") and obj.Name:match("Monster$")
@@ -1241,6 +1241,40 @@ local function buildUI()
                 tween(gteBtn, {BackgroundColor3 = Theme.Accent}, 0.15)
             end
         end)
+    end
+
+    do
+        local container, toggle = createSection("Sobre & Avisos")
+        toggle() -- Deixa a seção aberta por padrão
+
+        local infoRow = Instance.new("Frame")
+        infoRow.BackgroundColor3 = Theme.Background
+        infoRow.BorderSizePixel = 0
+        infoRow.Size = UDim2.new(1, -8, 0, 0)
+        infoRow.AutomaticSize = Enum.AutomaticSize.Y
+        infoRow.Parent = container
+
+        local infoCorner = Instance.new("UICorner")
+        infoCorner.CornerRadius = UDim.new(0, 8)
+        infoCorner.Parent = infoRow
+
+        local infoText = Instance.new("TextLabel")
+        infoText.BackgroundTransparency = 1
+        infoText.Size = UDim2.new(1, -20, 0, 0)
+        infoText.Position = UDim2.new(0, 10, 0, 10)
+        infoText.AutomaticSize = Enum.AutomaticSize.Y
+        infoText.RichText = true
+        infoText.TextWrapped = true
+        infoText.Font = Enum.Font.Gotham
+        infoText.TextSize = 14
+        infoText.TextColor3 = Theme.Text
+        infoText.TextXAlignment = Enum.TextXAlignment.Left
+        infoText.Text = "<b>Bem-vindo ao MGPI Viewer!</b> 🚀\n\nEste script te ajuda a navegar pelo jogo com algumas ferramentas úteis:\n\n    •  <b>ESP (Visualizador):</b> 👁️ Veja monstros, geradores, itens e outros jogadores através das paredes.\n    •  <b>Iluminação Total:</b> 💡 Deixe o mapa totalmente claro, sem sombras.\n    •  <b>Velocidade:</b> 🏃‍♂️ Ajuste e trave sua velocidade de corrida.\n    •  <b>Teleporte:</b> ➡️ Vá para o elevador instantaneamente.\n\n<font color='#ffcc00'>⚠️ <b>AVISO IMPORTANTE</b> ⚠️</font>\nEste script está em desenvolvimento (<b>BETA</b>). Podem ocorrer bugs ou erros. <b>Use por sua conta e risco.</b>"
+        infoText.Parent = infoRow
+
+        local padding = Instance.new("UIPadding")
+        padding.PaddingBottom = UDim.new(0, 10)
+        padding.Parent = infoRow
     end
 
     return screenGui
