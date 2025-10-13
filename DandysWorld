@@ -892,17 +892,17 @@ local function buildUI()
         local container, _ = createSection("Visibilidade")
 
         local function setAll(state)
-            for k, _ in pairs(Toggles) do
-                Toggles[k] = state
-            end
-            
             -- Atualiza o estado lógico de todos os toggles
             if state then
                 bindCurrentRoom()
                 initPlayers()
             else
                 clearAllHighlights()
-                disconnectAll(RoomConns)
+                -- Não desconectamos os eventos de player aqui, apenas limpamos os highlights
+                for _, pc in pairs(PlayerConns) do
+                    for _, c in ipairs(pc) do c:Disconnect() end
+                end
+                PlayerConns = {}
             end
 
             -- Atualiza o estado visual de todos os toggles, exceto o "Todos"
@@ -914,10 +914,12 @@ local function buildUI()
         end
 
         local row, allRender, allSwitch = createToggle("Todos", Theme.Accent, true, function(state)
-            Toggles["Todos"] = state
+            for k, _ in pairs(Toggles) do
+                Toggles[k] = state
+            end
             setAll(state)
         end, container)
-        toggleControls["Todos"] = {render = allRender, switch = allSwitch}
+        toggleControls["Todos"] = {render = allRender}
 
         local mRow, mRender, mSwitch = createToggle("Monstros", Config.Monsters.color, Toggles.Monsters, function(state)
             Toggles.Monsters = state
@@ -926,8 +928,8 @@ local function buildUI()
             else
                 rescanCurrentRoom()
             end
-        end, container)
-        toggleControls["Monstros"] = {render = mRender, switch = mSwitch}
+        end, container) 
+        toggleControls["Monstros"] = {render = mRender}
 
         local gRow, gRender, gSwitch = createToggle("Geradores", Config.Generators.color, Toggles.Generators, function(state)
             Toggles.Generators = state
@@ -936,8 +938,8 @@ local function buildUI()
             else
                 rescanCurrentRoom()
             end
-        end, container)
-        toggleControls["Geradores"] = {render = gRender, switch = gSwitch}
+        end, container) 
+        toggleControls["Geradores"] = {render = gRender}
 
         local iRow, iRender, iSwitch = createToggle("Itens", Config.Items.color, Toggles.Items, function(state)
             Toggles.Items = state
@@ -946,8 +948,8 @@ local function buildUI()
             else
                 rescanCurrentRoom()
             end
-        end, container)
-        toggleControls["Itens"] = {render = iRender, switch = iSwitch}
+        end, container) 
+        toggleControls["Itens"] = {render = iRender}
 
         local pRow, pRender, pSwitch = createToggle("Jogadores", Config.Players.color, Toggles.Players, function(state)
             Toggles.Players = state
@@ -957,8 +959,8 @@ local function buildUI()
                 -- initPlayers já lida com seus próprios eventos, não precisa de bindCurrentRoom
                 initPlayers()
             end
-        end, container)
-        toggleControls["Jogadores"] = {render = pRender, switch = pSwitch}
+        end, container) 
+        toggleControls["Jogadores"] = {render = pRender}
     end
 
         do
