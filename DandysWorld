@@ -737,8 +737,10 @@ local function buildUI()
 
         switch.MouseButton1Click:Connect(function()
             -- O callback 'onChanged' é responsável por atualizar Toggles[labelText]
-            onChanged(not Toggles[labelText])
-            render() -- Adicionado para redesenhar o botão após a mudança
+            -- Para toggles que não usam a tabela Toggles, o estado é gerenciado pelo callback.
+            local currentState = Toggles[labelText]
+            onChanged(not currentState)
+            render() -- Redesenha o botão após a mudança
         end)
         
         -- Renderização inicial
