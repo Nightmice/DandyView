@@ -924,7 +924,6 @@ local function buildUI()
             if not state then
                 clearHighlights("Monsters")
             else
-                bindCurrentRoom()
                 rescanCurrentRoom()
             end
         end, container)
@@ -935,7 +934,6 @@ local function buildUI()
             if not state then
                 clearHighlights("Generators")
             else
-                bindCurrentRoom()
                 rescanCurrentRoom()
             end
         end, container)
@@ -946,7 +944,6 @@ local function buildUI()
             if not state then
                 clearHighlights("Items")
             else
-                bindCurrentRoom()
                 rescanCurrentRoom()
             end
         end, container)
