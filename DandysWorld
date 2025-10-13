@@ -579,6 +579,7 @@ local function buildUI()
     end
 
         do
+        local UserInputService = game:GetService("UserInputService")
         local dragging = false
         local dragStart, startPos
         header.InputBegan:Connect(function(input)
@@ -586,15 +587,17 @@ local function buildUI()
                 dragging = true
                 dragStart = input.Position
                 startPos = frame.Position
+                -- Impede que eventos como LongPress interfiram
+                header.Active = true
             end
         end)
-        header.InputChanged:Connect(function(input)
+        UserInputService.InputChanged:Connect(function(input)
             if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
                 local delta = input.Position - dragStart
                 frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
             end
         end)
-        header.InputEnded:Connect(function(input)
+        UserInputService.InputEnded:Connect(function(input)
             if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                 dragging = false
             end
@@ -643,6 +646,8 @@ local function buildUI()
                 startSize = frame.AbsoluteSize
                 -- Desativa o ajuste automático de altura do content para evitar conflitos
                 content.AutomaticSize = Enum.AutomaticSize.None
+                -- Impede que eventos como LongPress interfiram
+                resizeHandle.Active = true
             end
         end)
 
@@ -662,7 +667,7 @@ local function buildUI()
         end)
     end
 
-        local function createToggle(labelText, color, initialState, onChanged, parentContainer)
+    local function createToggle(labelText, color, initialState, onChanged, parentContainer)
         local row = Instance.new("Frame")
         row.BackgroundColor3 = Theme.Background
         row.BorderSizePixel = 0
@@ -734,14 +739,14 @@ local function buildUI()
             onChanged(enabled)
         end)
 
-        return row
+        return row, render
     end
 
-        local function createSection(titleText)
+    local function createSection(titleText)
         local headerRow = Instance.new("Frame")
         headerRow.BackgroundColor3 = Theme.Background
         headerRow.BorderSizePixel = 0
-        headerRow.Size = UDim2.new(1, -8, 0, 36)
+        headerRow.Size = UDim2.new(1, 0, 0, 36)
         headerRow.Parent = scrolling
 
         local headerCorner = Instance.new("UICorner")
@@ -777,7 +782,7 @@ local function buildUI()
 
         local container = Instance.new("Frame")
         container.BackgroundTransparency = 1
-        container.Size = UDim2.new(1, -8, 0, 0)
+        container.Size = UDim2.new(1, 0, 0, 0)
         container.AutomaticSize = Enum.AutomaticSize.Y
         container.Visible = false
         container.Parent = scrolling
@@ -871,60 +876,66 @@ local function buildUI()
     end)
 
     do
+        local toggleRenders = {}
         local container, _ = createSection("Visibilidade")
 
         local function setAll(state)
             for k, _ in pairs(Toggles) do
                 Toggles[k] = state
             end
+
             if state then
                 bindCurrentRoom()
                 initPlayers()
             else
                 clearAllHighlights()
             end
+
+            for _, renderFunc in pairs(toggleRenders) do
+                renderFunc()
+            end
         end
 
-        createToggle("Todos", Theme.Accent, true, function(state)
+        local _, allRender = createToggle("Todos", Theme.Accent, true, function(state)
             setAll(state)
-            -- NOTE: This doesn't update the other toggles visually. A more complex setup would be needed for that.
         end, container)
+        toggleRenders["All"] = allRender
 
-        createToggle("Monstros", Config.Monsters.color, Toggles.Monsters, function(state)
+        local _, monstersRender = createToggle("Monstros", Config.Monsters.color, Toggles.Monsters, function(state)
             Toggles.Monsters = state
             if not state then
                 clearHighlights("Monsters")
             else
                 rescanCurrentRoom()
             end
-        end, container)
+        end, container); toggleRenders["Monsters"] = monstersRender
 
-        createToggle("Geradores", Config.Generators.color, Toggles.Generators, function(state)
+        local _, generatorsRender = createToggle("Geradores", Config.Generators.color, Toggles.Generators, function(state)
             Toggles.Generators = state
             if not state then
                 clearHighlights("Generators")
             else
                 rescanCurrentRoom()
             end
-        end, container)
+        end, container); toggleRenders["Generators"] = generatorsRender
 
-        createToggle("Itens", Config.Items.color, Toggles.Items, function(state)
+        local _, itemsRender = createToggle("Itens", Config.Items.color, Toggles.Items, function(state)
             Toggles.Items = state
             if not state then
                 clearHighlights("Items")
             else
                 rescanCurrentRoom()
             end
-        end, container)
+        end, container); toggleRenders["Items"] = itemsRender
 
-        createToggle("Jogadores", Config.Players.color, Toggles.Players, function(state)
+        local _, playersRender = createToggle("Jogadores", Config.Players.color, Toggles.Players, function(state)
             Toggles.Players = state
             if not state then
                 clearHighlights("Players")
             else
                 initPlayers()
             end
-        end, container)
+        end, container); toggleRenders["Players"] = playersRender
     end
 
         do
@@ -956,7 +967,7 @@ local function buildUI()
         local speedRow = Instance.new("Frame")
         speedRow.BackgroundColor3 = Theme.Background
         speedRow.BorderSizePixel = 0
-        speedRow.Size = UDim2.new(1, -8, 0, 100)
+        speedRow.Size = UDim2.new(1, 0, 0, 100)
         speedRow.Parent = container
 
         local speedCorner = Instance.new("UICorner")
@@ -1170,7 +1181,7 @@ local function buildUI()
         local gteRow = Instance.new("Frame")
         gteRow.BackgroundColor3 = Theme.Background
         gteRow.BorderSizePixel = 0
-        gteRow.Size = UDim2.new(1, -8, 0, 60)
+        gteRow.Size = UDim2.new(1, 0, 0, 60)
         gteRow.Parent = container
 
         local gteCorner = Instance.new("UICorner")
@@ -1250,7 +1261,7 @@ local function buildUI()
         local infoRow = Instance.new("Frame")
         infoRow.BackgroundColor3 = Theme.Background
         infoRow.BorderSizePixel = 0
-        infoRow.Size = UDim2.new(1, -8, 0, 0)
+        infoRow.Size = UDim2.new(1, 0, 0, 0)
         infoRow.AutomaticSize = Enum.AutomaticSize.Y
         infoRow.Parent = container
 
