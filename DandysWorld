@@ -872,6 +872,13 @@ local function buildUI()
         if SpeedConnection then
             SpeedConnection:Disconnect()
         end
+        -- Restaura a velocidade do jogador para o padrão
+        local char = LocalPlayer.Character
+        if char then
+            local humanoid = char:FindFirstChildOfClass("Humanoid")
+            if humanoid then humanoid.WalkSpeed = 16 end
+        end
+
         screenGui:Destroy()
     end)
 
@@ -889,6 +896,7 @@ local function buildUI()
                 initPlayers()
             else
                 clearAllHighlights()
+                disconnectAll(RoomConns) -- Adicionado para parar de ouvir eventos
             end
 
             for _, renderFunc in pairs(toggleRenders) do
@@ -906,6 +914,7 @@ local function buildUI()
             if not state then
                 clearHighlights("Monsters")
             else
+                bindCurrentRoom() -- Garante que os eventos estão ativos
                 rescanCurrentRoom()
             end
         end, container); toggleRenders["Monsters"] = monstersRender
@@ -915,6 +924,7 @@ local function buildUI()
             if not state then
                 clearHighlights("Generators")
             else
+                bindCurrentRoom() -- Garante que os eventos estão ativos
                 rescanCurrentRoom()
             end
         end, container); toggleRenders["Generators"] = generatorsRender
@@ -924,6 +934,7 @@ local function buildUI()
             if not state then
                 clearHighlights("Items")
             else
+                bindCurrentRoom() -- Garante que os eventos estão ativos
                 rescanCurrentRoom()
             end
         end, container); toggleRenders["Items"] = itemsRender
@@ -933,6 +944,7 @@ local function buildUI()
             if not state then
                 clearHighlights("Players")
             else
+                -- initPlayers já lida com seus próprios eventos, não precisa de bindCurrentRoom
                 initPlayers()
             end
         end, container); toggleRenders["Players"] = playersRender
