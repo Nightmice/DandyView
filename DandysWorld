@@ -702,11 +702,11 @@ local function buildUI()
         switch.AutoButtonColor = false
         switch.Parent = row
 
-        local switchCorner = Instance.new("UICorner")
-        switchCorner.CornerRadius = UDim.new(0, 13)
+        local switchCorner = Instance.new("UICorner") -- switchCorner
+        switchCorner.CornerRadius = UDim.new(0, 13) -- 26/2
         switchCorner.Parent = switch
 
-        local knob = Instance.new("Frame")
+        local knob = Instance.new("Frame") -- knob
         knob.Size = UDim2.new(0, 22, 0, 22)
         knob.Position = initialState and UDim2.new(1, -24, 0, 2) or UDim2.new(0, 2, 0, 2)
         if initialState then
@@ -715,11 +715,11 @@ local function buildUI()
             knob.BackgroundColor3 = Theme.Text
         end
         knob.Parent = switch
-
+ 
         local knobCorner = Instance.new("UICorner")
         knobCorner.CornerRadius = UDim.new(1, 0)
         knobCorner.Parent = knob
-
+ 
         local knobStroke = Instance.new("UIStroke")
         knobStroke.Thickness = 1
         knobStroke.Color = Theme.Stroke
@@ -727,19 +727,24 @@ local function buildUI()
 
         local enabled = initialState
         local function render()
+            enabled = Toggles[labelText] or enabled -- Sincroniza com o estado global
             tween(knob, {Position = enabled and UDim2.new(1, -24, 0, 2) or UDim2.new(0, 2, 0, 2)}, 0.15)
             knob.BackgroundColor3 = enabled and color or Theme.Text
             switch.BackgroundColor3 = enabled and Theme.AccentAlt or Theme.Subtle
         end
-        render()
 
         switch.MouseButton1Click:Connect(function()
             enabled = not enabled
-            render()
             onChanged(enabled)
+            -- A função onChanged agora deve atualizar Toggles[labelText]
+            -- e então chamamos render() para refletir a mudança.
+            render() 
         end)
+        
+        -- Renderização inicial
+        render()
 
-        return row, render
+        return row, render, switch
     end
 
     local function createSection(titleText)
@@ -883,63 +888,71 @@ local function buildUI()
     end)
 
     do
-        local toggleRenders = {}
+        local toggleControls = {} -- Armazenará {renderFunc, switchButton}
         local container, _ = createSection("Visibilidade")
 
         local function setAll(state)
             for k, _ in pairs(Toggles) do
                 Toggles[k] = state
             end
-
+            
+            -- Atualiza o estado lógico de todos os toggles
             if state then
                 bindCurrentRoom()
                 initPlayers()
             else
                 clearAllHighlights()
-                disconnectAll(RoomConns) -- Adicionado para parar de ouvir eventos
+                disconnectAll(RoomConns)
             end
 
-            for _, renderFunc in pairs(toggleRenders) do
-                renderFunc()
+            -- Atualiza o estado visual de todos os toggles, exceto o "Todos"
+            for key, control in pairs(toggleControls) do
+                if key ~= "Todos" then
+                    control.render()
+                end
             end
         end
 
-        local _, allRender = createToggle("Todos", Theme.Accent, true, function(state)
+        local row, allRender, allSwitch = createToggle("Todos", Theme.Accent, true, function(state)
+            Toggles["Todos"] = state
             setAll(state)
         end, container)
-        toggleRenders["All"] = allRender
+        toggleControls["Todos"] = {render = allRender, switch = allSwitch}
 
-        local _, monstersRender = createToggle("Monstros", Config.Monsters.color, Toggles.Monsters, function(state)
+        local mRow, mRender, mSwitch = createToggle("Monstros", Config.Monsters.color, Toggles.Monsters, function(state)
             Toggles.Monsters = state
             if not state then
                 clearHighlights("Monsters")
             else
-                bindCurrentRoom() -- Garante que os eventos estão ativos
+                bindCurrentRoom()
                 rescanCurrentRoom()
             end
-        end, container); toggleRenders["Monsters"] = monstersRender
+        end, container)
+        toggleControls["Monstros"] = {render = mRender, switch = mSwitch}
 
-        local _, generatorsRender = createToggle("Geradores", Config.Generators.color, Toggles.Generators, function(state)
+        local gRow, gRender, gSwitch = createToggle("Geradores", Config.Generators.color, Toggles.Generators, function(state)
             Toggles.Generators = state
             if not state then
                 clearHighlights("Generators")
             else
-                bindCurrentRoom() -- Garante que os eventos estão ativos
+                bindCurrentRoom()
                 rescanCurrentRoom()
             end
-        end, container); toggleRenders["Generators"] = generatorsRender
+        end, container)
+        toggleControls["Geradores"] = {render = gRender, switch = gSwitch}
 
-        local _, itemsRender = createToggle("Itens", Config.Items.color, Toggles.Items, function(state)
+        local iRow, iRender, iSwitch = createToggle("Itens", Config.Items.color, Toggles.Items, function(state)
             Toggles.Items = state
             if not state then
                 clearHighlights("Items")
             else
-                bindCurrentRoom() -- Garante que os eventos estão ativos
+                bindCurrentRoom()
                 rescanCurrentRoom()
             end
-        end, container); toggleRenders["Items"] = itemsRender
+        end, container)
+        toggleControls["Itens"] = {render = iRender, switch = iSwitch}
 
-        local _, playersRender = createToggle("Jogadores", Config.Players.color, Toggles.Players, function(state)
+        local pRow, pRender, pSwitch = createToggle("Jogadores", Config.Players.color, Toggles.Players, function(state)
             Toggles.Players = state
             if not state then
                 clearHighlights("Players")
@@ -947,7 +960,8 @@ local function buildUI()
                 -- initPlayers já lida com seus próprios eventos, não precisa de bindCurrentRoom
                 initPlayers()
             end
-        end, container); toggleRenders["Players"] = playersRender
+        end, container)
+        toggleControls["Jogadores"] = {render = pRender, switch = pSwitch}
     end
 
         do
