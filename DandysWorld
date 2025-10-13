@@ -725,20 +725,20 @@ local function buildUI()
         knobStroke.Color = Theme.Stroke
         knobStroke.Parent = knob
 
-        local enabled = initialState
+        -- A fonte da verdade agora é a tabela Toggles
+        Toggles[labelText] = Toggles[labelText] == nil and initialState or Toggles[labelText]
+
         local function render()
-            enabled = Toggles[labelText] or enabled -- Sincroniza com o estado global
+            local enabled = Toggles[labelText]
             tween(knob, {Position = enabled and UDim2.new(1, -24, 0, 2) or UDim2.new(0, 2, 0, 2)}, 0.15)
             knob.BackgroundColor3 = enabled and color or Theme.Text
             switch.BackgroundColor3 = enabled and Theme.AccentAlt or Theme.Subtle
         end
 
         switch.MouseButton1Click:Connect(function()
-            enabled = not enabled
-            onChanged(enabled)
-            -- A função onChanged agora deve atualizar Toggles[labelText]
-            -- e então chamamos render() para refletir a mudança.
-            render() 
+            -- O callback 'onChanged' é responsável por atualizar Toggles[labelText]
+            onChanged(not Toggles[labelText])
+            render() -- Adicionado para redesenhar o botão após a mudança
         end)
         
         -- Renderização inicial
@@ -891,67 +891,37 @@ local function buildUI()
         local toggleControls = {} -- Armazenará {renderFunc, switchButton}
         local container, _ = createSection("Visibilidade")
 
-        local function setAll(state)
-            -- Atualiza o estado lógico de todos os toggles
-            if state then
-                bindCurrentRoom()
-                initPlayers()
-            else
-                clearAllHighlights()
-                -- Não desconectamos os eventos de player aqui, apenas limpamos os highlights
-                for _, pc in pairs(PlayerConns) do
-                    for _, c in ipairs(pc) do c:Disconnect() end
-                end
-                PlayerConns = {}
-            end
-
-            -- Atualiza o estado visual de todos os toggles, exceto o "Todos"
-            for key, control in pairs(toggleControls) do
-                if key ~= "Todos" then
-                    control.render()
-                end
-            end
-        end
-
-        local row, allRender, allSwitch = createToggle("Todos", Theme.Accent, true, function(state)
-            for k, _ in pairs(Toggles) do
-                Toggles[k] = state
-            end
-            setAll(state)
-        end, container)
-        toggleControls["Todos"] = {render = allRender}
-
-        local mRow, mRender, mSwitch = createToggle("Monstros", Config.Monsters.color, Toggles.Monsters, function(state)
+        local mRow, mRender, mSwitch = createToggle("Monsters", Config.Monsters.color, Toggles.Monsters, function(state)
             Toggles.Monsters = state
             if not state then
                 clearHighlights("Monsters")
             else
                 rescanCurrentRoom()
             end
-        end, container) 
-        toggleControls["Monstros"] = {render = mRender}
+        end, container)
+        toggleControls["Monsters"] = {render = mRender}
 
-        local gRow, gRender, gSwitch = createToggle("Geradores", Config.Generators.color, Toggles.Generators, function(state)
+        local gRow, gRender, gSwitch = createToggle("Generators", Config.Generators.color, Toggles.Generators, function(state)
             Toggles.Generators = state
             if not state then
                 clearHighlights("Generators")
             else
                 rescanCurrentRoom()
             end
-        end, container) 
-        toggleControls["Geradores"] = {render = gRender}
+        end, container)
+        toggleControls["Generators"] = {render = gRender}
 
-        local iRow, iRender, iSwitch = createToggle("Itens", Config.Items.color, Toggles.Items, function(state)
+        local iRow, iRender, iSwitch = createToggle("Items", Config.Items.color, Toggles.Items, function(state)
             Toggles.Items = state
             if not state then
                 clearHighlights("Items")
             else
                 rescanCurrentRoom()
             end
-        end, container) 
-        toggleControls["Itens"] = {render = iRender}
+        end, container)
+        toggleControls["Items"] = {render = iRender}
 
-        local pRow, pRender, pSwitch = createToggle("Jogadores", Config.Players.color, Toggles.Players, function(state)
+        local pRow, pRender, pSwitch = createToggle("Players", Config.Players.color, Toggles.Players, function(state)
             Toggles.Players = state
             if not state then
                 clearHighlights("Players")
@@ -959,8 +929,8 @@ local function buildUI()
                 -- initPlayers já lida com seus próprios eventos, não precisa de bindCurrentRoom
                 initPlayers()
             end
-        end, container) 
-        toggleControls["Jogadores"] = {render = pRender}
+        end, container)
+        toggleControls["Players"] = {render = pRender}
     end
 
         do
