@@ -212,6 +212,8 @@ local Cleanup = {
     Players = {},
 }
 
+local ForcedVisibleParts = {}
+
 local RoomConns = {}
 
 local QueueMap = {}
@@ -366,6 +368,31 @@ end)
 
 local function processCandidate(inst)
     if not inst or not inst.Parent then return end
+
+    -- Exceção para BlotHandZone, que é a área de ataque da mão
+    if Toggles.Monsters and inst.Name:match("^BlotHandZone_%d+$") then
+        -- O highlight deve ser nas partes específicas dentro do Model (BlotHand_R/L)
+        local handModel = inst:FindFirstChildOfClass("Model") 
+        if handModel and (handModel.Name == "BlotHand_R" or handModel.Name == "BlotHand_L") then
+            -- Lista de partes a serem destacadas dentro da mão
+            local partsToHighlight = {
+                ["IchorPuddle"] = true,
+				["Arm"] = true,
+            }
+            for _, part in ipairs(handModel:GetChildren()) do
+                if partsToHighlight[part.Name] then
+                    -- Força a visibilidade do objeto, já que pode ser invisível
+                    if part:IsA("BasePart") then
+                        part.Transparency = 0
+                        table.insert(ForcedVisibleParts, part)
+                    end
+                    createHighlight("Monsters", part)
+                end
+            end
+        end
+        return -- Já processado, não precisa continuar
+    end
+
     for typeKey, cfg in pairs(Config) do
         if typeKey ~= "Players" and Toggles[typeKey] then
             local target = findTopUnderFolder(inst, cfg.folderName)
@@ -874,6 +901,15 @@ local function buildUI()
             SpeedDisplayConnection:Disconnect()
             SpeedDisplayConnection = nil
         end
+        -- Restaura a visibilidade das partes forçadas
+        for _, part in ipairs(ForcedVisibleParts) do
+            if part and part:IsA("BasePart") then
+                part.Transparency = 1
+            end
+        end
+        ForcedVisibleParts = {}
+        -- Reset do índice de teleporte do gerador
+        currentGeneratorTeleportIndex = 1
         local char = LocalPlayer.Character
         if char then
             local humanoid = char:FindFirstChildOfClass("Humanoid")
@@ -1164,6 +1200,115 @@ local function buildUI()
                 end
             end
         end, container)
+    end
+
+    local currentGeneratorTeleportIndex = 1
+    do
+        local container, _ = createSection("Teleporte para Gerador")
+
+        local genTpRow = Instance.new("Frame")
+        genTpRow.BackgroundColor3 = Theme.Background
+        genTpRow.BorderSizePixel = 0
+        genTpRow.Size = UDim2.new(1, 0, 0, 60)
+        genTpRow.Parent = container
+
+        local genTpCorner = Instance.new("UICorner")
+        genTpCorner.CornerRadius = UDim.new(0, 8)
+        genTpCorner.Parent = genTpRow
+
+        local genTpStroke = Instance.new("UIStroke")
+        genTpStroke.Thickness = 1
+        genTpStroke.Color = Theme.Stroke
+        genTpStroke.Parent = genTpRow
+
+        local genTpLabel = Instance.new("TextLabel")
+        genTpLabel.BackgroundTransparency = 1
+        genTpLabel.Size = UDim2.new(1, -20, 0, 20)
+        genTpLabel.Position = UDim2.new(0, 10, 0, 8)
+        genTpLabel.Text = "Teleportar para o próximo gerador na ordem."
+        genTpLabel.Font = Enum.Font.Gotham
+        genTpLabel.TextSize = 14
+        genTpLabel.TextXAlignment = Enum.TextXAlignment.Left
+        genTpLabel.TextColor3 = Theme.Text
+        genTpLabel.Parent = genTpRow
+
+        local genTpBtn = Instance.new("TextButton")
+        genTpBtn.Size = UDim2.new(1, -20, 0, 28)
+        genTpBtn.Position = UDim2.new(0, 10, 1, -36)
+        genTpBtn.BackgroundColor3 = Theme.Accent
+        genTpBtn.Text = "Próximo Gerador"
+        genTpBtn.TextColor3 = Theme.Text
+        genTpBtn.Font = Enum.Font.GothamBold
+        genTpBtn.TextSize = 14
+        genTpBtn.AutoButtonColor = false
+        genTpBtn.Parent = genTpRow
+
+        local genTpBtnCorner = Instance.new("UICorner")
+        genTpBtnCorner.CornerRadius = UDim.new(0, 6)
+        genTpBtnCorner.Parent = genTpBtn
+
+        local genTpBtnStroke = Instance.new("UIStroke")
+        genTpBtnStroke.Thickness = 1
+        genTpBtnStroke.Color = Theme.Stroke
+        genTpBtnStroke.Parent = genTpBtn
+
+        local function teleportToNextGenerator()
+            local char = LocalPlayer.Character
+            local hrp = char and char:FindFirstChild("HumanoidRootPart")
+            if not hrp then return false, "Personagem não encontrado" end
+
+            local generators = {}
+            for obj, _ in pairs(Active.Generators) do
+                table.insert(generators, obj)
+            end
+
+            if #generators == 0 then return false, "Nenhum gerador ativo" end
+
+            table.sort(generators, function(a, b)
+                return (a.PrimaryPart.Position - hrp.Position).Magnitude < (b.PrimaryPart.Position - hrp.Position).Magnitude
+            end)
+
+            if currentGeneratorTeleportIndex > #generators then
+                currentGeneratorTeleportIndex = 1
+            end
+
+            local targetGenerator = generators[currentGeneratorTeleportIndex]
+            local targetPart = targetGenerator:IsA("Model") and targetGenerator.PrimaryPart or targetGenerator
+            if not targetPart then return false, "Parte do gerador inválida" end
+
+            hrp.CFrame = targetPart.CFrame + Vector3.new(0, 5, 0)
+            currentGeneratorTeleportIndex = currentGeneratorTeleportIndex + 1
+            return true, "Teleportado para o gerador " .. currentGeneratorTeleportIndex - 1 .. "/" .. #generators
+        end
+
+        genTpBtn.MouseButton1Click:Connect(function()
+            local success, message = teleportToNextGenerator()
+            if success then
+                genTpBtn.Text = message
+                genTpBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
+                task.wait(1)
+                genTpBtn.Text = "Próximo Gerador"
+                genTpBtn.BackgroundColor3 = Theme.Accent
+            else
+                genTpBtn.Text = message
+                genTpBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+                task.wait(1.5)
+                genTpBtn.Text = "Próximo Gerador"
+                genTpBtn.BackgroundColor3 = Theme.Accent
+            end
+        end)
+
+        genTpBtn.MouseEnter:Connect(function()
+            if genTpBtn.Text == "Próximo Gerador" then
+                tween(genTpBtn, {BackgroundColor3 = Theme.AccentAlt}, 0.15)
+            end
+        end)
+
+        genTpBtn.MouseLeave:Connect(function()
+            if genTpBtn.Text == "Próximo Gerador" then
+                tween(genTpBtn, {BackgroundColor3 = Theme.Accent}, 0.15)
+            end
+        end)
     end
 
     do
