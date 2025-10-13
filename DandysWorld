@@ -587,7 +587,6 @@ local function buildUI()
                 dragging = true
                 dragStart = input.Position
                 startPos = frame.Position
-                -- Impede que eventos como LongPress interfiram
                 header.Active = true
             end
         end)
@@ -615,13 +614,13 @@ local function buildUI()
         resizeHandle.Size = UDim2.new(1, 0, 0, 10)
         resizeHandle.Position = UDim2.new(0, 0, 1, -10)
         resizeHandle.BackgroundTransparency = 1
-        resizeHandle.ZIndex = 2 -- Garante que a alça fique sobre outros elementos
+        resizeHandle.ZIndex = 2
         resizeHandle.Parent = frame
 
         local grabberIcon = Instance.new("TextLabel")
         grabberIcon.Name = "GrabberIcon"
-        grabberIcon.Size = UDim2.new(0, 60, 0, 10) -- Mais largo
-        grabberIcon.Position = UDim2.new(0.5, -30, 1, -12) -- Centralizado
+        grabberIcon.Size = UDim2.new(0, 60, 0, 10)
+        grabberIcon.Position = UDim2.new(0.5, -30, 1, -12)
         grabberIcon.BackgroundTransparency = 1
         grabberIcon.Font = Enum.Font.SourceSansBold
         grabberIcon.Text = "• • •"
@@ -631,7 +630,7 @@ local function buildUI()
         grabberIcon.Parent = frame
 
         resizeHandle.MouseEnter:Connect(function()
-            UserInputService.MouseIcon = "rbxassetid://10495491134" -- Cursor de redimensionamento vertical
+            UserInputService.MouseIcon = "rbxassetid://10495491134"
             tween(grabberIcon, {TextColor3 = Theme.Accent}, 0.15)
         end)
         resizeHandle.MouseLeave:Connect(function()
@@ -644,9 +643,7 @@ local function buildUI()
                 resizing = true
                 resizeStart = input.Position
                 startSize = frame.AbsoluteSize
-                -- Desativa o ajuste automático de altura do content para evitar conflitos
                 content.AutomaticSize = Enum.AutomaticSize.None
-                -- Impede que eventos como LongPress interfiram
                 resizeHandle.Active = true
             end
         end)
@@ -662,7 +659,7 @@ local function buildUI()
         UserInputService.InputEnded:Connect(function(input)
             if resizing and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
                 resizing = false
-                UserInputService.MouseIcon = "" -- Garante que o cursor volte ao normal
+                UserInputService.MouseIcon = ""
             end
         end)
     end
@@ -702,11 +699,11 @@ local function buildUI()
         switch.AutoButtonColor = false
         switch.Parent = row
 
-        local switchCorner = Instance.new("UICorner") -- switchCorner
-        switchCorner.CornerRadius = UDim.new(0, 13) -- 26/2
+        local switchCorner = Instance.new("UICorner")
+        switchCorner.CornerRadius = UDim.new(0, 13)
         switchCorner.Parent = switch
 
-        local knob = Instance.new("Frame") -- knob
+        local knob = Instance.new("Frame")
         knob.Size = UDim2.new(0, 22, 0, 22)
         knob.Position = initialState and UDim2.new(1, -24, 0, 2) or UDim2.new(0, 2, 0, 2)
         if initialState then
@@ -725,7 +722,6 @@ local function buildUI()
         knobStroke.Color = Theme.Stroke
         knobStroke.Parent = knob
 
-        -- A fonte da verdade agora é a tabela Toggles
         Toggles[labelText] = Toggles[labelText] == nil and initialState or Toggles[labelText]
 
         local function render()
@@ -736,14 +732,12 @@ local function buildUI()
         end
 
         switch.MouseButton1Click:Connect(function()
-            -- O callback 'onChanged' é responsável por atualizar Toggles[labelText]
-            -- Para toggles que não usam a tabela Toggles, o estado é gerenciado pelo callback.
-            local currentState = Toggles[labelText]
-            onChanged(not currentState)
-            render() -- Redesenha o botão após a mudança
+            local newState = not Toggles[labelText]
+            Toggles[labelText] = newState
+            onChanged(newState)
+            render()
         end)
         
-        -- Renderização inicial
         render()
 
         return row, render, switch
@@ -843,17 +837,14 @@ local function buildUI()
     minimizeBtn.MouseButton1Click:Connect(function()
         minimized = not minimized
         if minimized then
-            -- Salvar a altura expandida antes de minimizar
             expandedHeight = frame.AbsoluteSize.Y
             content.Visible = false
             tween(frame, {Size = UDim2.new(0, 420, 0, 48)}, 0.2)
             minimizeBtn.Text = "□"
         else
             content.Visible = true
-            -- Restaurar a altura expandida
-            -- Garante que a altura restaurada não seja menor que a mínima
             if expandedHeight <= 48 then
-                expandedHeight = 450 -- Restaura para a altura padrão se algo der errado
+                expandedHeight = 450
             end
             tween(frame, {Size = UDim2.new(0, 420, 0, expandedHeight)}, 0.2)
             minimizeBtn.Text = "_"
@@ -879,7 +870,10 @@ local function buildUI()
         if SpeedConnection then
             SpeedConnection:Disconnect()
         end
-        -- Restaura a velocidade do jogador para o padrão
+        if SpeedDisplayConnection then
+            SpeedDisplayConnection:Disconnect()
+            SpeedDisplayConnection = nil
+        end
         local char = LocalPlayer.Character
         if char then
             local humanoid = char:FindFirstChildOfClass("Humanoid")
@@ -890,7 +884,7 @@ local function buildUI()
     end)
 
     do
-        local toggleControls = {} -- Armazenará {renderFunc, switchButton}
+        local toggleControls = {}
         local container, _ = createSection("Visibilidade")
 
         local mRow, mRender, mSwitch = createToggle("Monsters", Config.Monsters.color, Toggles.Monsters, function(state)
@@ -928,7 +922,6 @@ local function buildUI()
             if not state then
                 clearHighlights("Players")
             else
-                -- initPlayers já lida com seus próprios eventos, não precisa de bindCurrentRoom
                 initPlayers()
             end
         end, container)
@@ -961,6 +954,7 @@ local function buildUI()
     do
         local container, _ = createSection("Velocidade")
 
+        local SpeedDisplayConnection = nil
         local speedRow = Instance.new("Frame")
         speedRow.BackgroundColor3 = Theme.Background
         speedRow.BorderSizePixel = 0
@@ -1150,7 +1144,7 @@ local function buildUI()
             applySpeed()
         end)
 
-        RunService.Heartbeat:Connect(function()
+        SpeedDisplayConnection = RunService.Heartbeat:Connect(function()
             if Settings.SpeedEnabled and not Settings.SpeedLocked then
                 local currentSpeed = getCurrentSpeed()
                 speedDisplay.Text = tostring(math.floor(currentSpeed))
@@ -1253,7 +1247,7 @@ local function buildUI()
 
     do
         local container, toggle = createSection("Sobre & Avisos")
-        toggle() -- Deixa a seção aberta por padrão
+        toggle()
 
         local infoRow = Instance.new("Frame")
         infoRow.BackgroundColor3 = Theme.Background
