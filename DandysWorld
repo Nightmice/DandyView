@@ -369,28 +369,19 @@ end)
 local function processCandidate(inst)
     if not inst or not inst.Parent then return end
 
-    -- Exceção para BlotHandZone, que é a área de ataque da mão
-    if Toggles.Monsters and inst.Name:match("^BlotHandZone_%d+$") then
-        -- O highlight deve ser nas partes específicas dentro do Model (BlotHand_R/L)
-        local handModel = inst:FindFirstChildOfClass("Model") 
-        if handModel and (handModel.Name == "BlotHand_R" or handModel.Name == "BlotHand_L") then
-            -- Lista de partes a serem destacadas dentro da mão
-            local partsToHighlight = {
-                ["IchorPuddle"] = true,
-				["Arm"] = true,
-            }
-            for _, part in ipairs(handModel:GetChildren()) do
-                if partsToHighlight[part.Name] then
-                    -- Força a visibilidade do objeto, já que pode ser invisível
-                    if part:IsA("BasePart") then
-                        part.Transparency = 0
-                        table.insert(ForcedVisibleParts, part)
-                    end
-                    createHighlight("Monsters", part)
-                end
+    -- Exceção para as partes da mão do monstro (BlotHand)
+    if Toggles.Monsters and (inst.Name == "IchorPuddle" or inst.Name == "Arm") then
+        local handModel = inst.Parent
+        -- Verifica se a parte está dentro do modelo correto da mão
+        if handModel and handModel:IsA("Model") and (handModel.Name == "BlotHand_R" or handModel.Name == "BlotHand_L") then
+            -- Força a visibilidade do objeto, já que pode ser invisível
+            if inst:IsA("BasePart") then
+                inst.Transparency = 0
+                table.insert(ForcedVisibleParts, inst)
             end
+            createHighlight("Monsters", inst)
+            return -- Já processado, não precisa continuar
         end
-        return -- Já processado, não precisa continuar
     end
 
     for typeKey, cfg in pairs(Config) do
