@@ -32,6 +32,7 @@ local Settings = {
     SpeedEnabled = false,
     SpeedValue = 16,
     SpeedLocked = false,
+    QuickAccess = false,
 }
 
 local LightingBackup = {
@@ -369,18 +370,18 @@ end)
 local function processCandidate(inst)
     if not inst or not inst.Parent then return end
 
-    -- Exceção para as partes da mão do monstro (BlotHand)
+    -- ExceÃ§Ã£o para as partes da mÃ£o do monstro (BlotHand)
     if Toggles.Monsters and (inst.Name == "IchorPuddle" or inst.Name == "Arm") then
         local handModel = inst.Parent
-        -- Verifica se a parte está dentro do modelo correto da mão
+        -- Verifica se a parte estÃ¡ dentro do modelo correto da mÃ£o
         if handModel and handModel:IsA("Model") and (handModel.Name == "BlotHand_R" or handModel.Name == "BlotHand_L") then
-            -- Força a visibilidade do objeto, já que pode ser invisível
+            -- ForÃ§a a visibilidade do objeto, jÃ¡ que pode ser invisÃ­vel
             if inst:IsA("BasePart") then
                 inst.Transparency = 0
                 table.insert(ForcedVisibleParts, inst)
             end
             createHighlight("Monsters", inst)
-            return -- Já processado, não precisa continuar
+            return -- JÃ¡ processado, nÃ£o precisa continuar
         end
     end
 
@@ -453,6 +454,10 @@ local function buildUI()
     screenGui.ResetOnSpawn = false
     screenGui.Parent = PlayerGui
 
+    local quickAccessFrame = Instance.new("Frame")
+    quickAccessFrame.Name = "QuickAccessFrame"
+    quickAccessFrame.BackgroundTransparency = 1
+
     local frame = Instance.new("Frame")
     frame.Name = "MainFrame"
     frame.Size = UDim2.new(0, 420, 0, 48) -- Altura inicial apenas para o header
@@ -461,6 +466,14 @@ local function buildUI()
     frame.BorderSizePixel = 0
     frame.ClipsDescendants = true
     frame.Parent = screenGui
+
+    quickAccessFrame.Size = UDim2.new(0, 142, 0, 36)
+    quickAccessFrame.Visible = false
+    quickAccessFrame.Parent = screenGui
+    local qaLayout = Instance.new("UIListLayout")
+    qaLayout.FillDirection = Enum.FillDirection.Horizontal
+    qaLayout.Padding = UDim.new(0, 8)
+    qaLayout.Parent = quickAccessFrame
 
     local frameCorner = Instance.new("UICorner")
     frameCorner.CornerRadius = UDim.new(0, 12)
@@ -552,7 +565,7 @@ local function buildUI()
 
         local content = Instance.new("Frame")
     content.Name = "Content"
-    content.Size = UDim2.new(1, -24, 1, -72) -- Ocupa o espaço restante
+    content.Size = UDim2.new(1, -24, 1, -72) -- Ocupa o espaÃ§o restante
     content.Position = UDim2.new(0, 12, 0, 60)
     content.BackgroundColor3 = Theme.Panel
     content.Parent = frame
@@ -621,7 +634,7 @@ local function buildUI()
         end)
     end
 
-    do -- Lógica de redimensionamento vertical
+    do -- LÃ³gica de redimensionamento vertical
         local UserInputService = game:GetService("UserInputService")
         local resizing = false
         local resizeStart, startSize
@@ -740,13 +753,14 @@ local function buildUI()
         knobStroke.Color = Theme.Stroke
         knobStroke.Parent = knob
 
-        Toggles[labelText] = Toggles[labelText] == nil and initialState or Toggles[labelText]
+        local enabled = Toggles[labelText] == nil and initialState or Toggles[labelText]
+        Toggles[labelText] = enabled
 
         local function render()
-            local enabled = Toggles[labelText]
-            tween(knob, {Position = enabled and UDim2.new(1, -24, 0, 2) or UDim2.new(0, 2, 0, 2)}, 0.15)
-            knob.BackgroundColor3 = enabled and color or Theme.Text
-            switch.BackgroundColor3 = enabled and Theme.AccentAlt or Theme.Subtle
+            local currentState = Toggles[labelText]
+            tween(knob, {Position = currentState and UDim2.new(1, -24, 0, 2) or UDim2.new(0, 2, 0, 2)}, 0.15)
+            knob.BackgroundColor3 = currentState and color or Theme.Text
+            switch.BackgroundColor3 = currentState and Theme.AccentAlt or Theme.Subtle
         end
 
         switch.MouseButton1Click:Connect(function()
@@ -848,8 +862,15 @@ local function buildUI()
         notif:Destroy()
     end
 
+    local function updateQuickAccessPosition()
+        local framePos = frame.AbsolutePosition
+        local frameSize = frame.AbsoluteSize
+        -- Posiciona abaixo da GUI, com margem de 8 pixels
+        quickAccessFrame.Position = UDim2.fromOffset(framePos.X + (frameSize.X / 2) - (quickAccessFrame.AbsoluteSize.X / 2), framePos.Y + frameSize.Y + 65)
+    end
+
     local minimized = false
-    local expandedHeight = 450 -- Altura inicial padrão
+    local expandedHeight = 450 -- Altura inicial padrÃ£o
     frame.Size = UDim2.new(0, 420, 0, expandedHeight)
 
     minimizeBtn.MouseButton1Click:Connect(function()
@@ -858,14 +879,27 @@ local function buildUI()
             expandedHeight = frame.AbsoluteSize.Y
             content.Visible = false
             tween(frame, {Size = UDim2.new(0, 420, 0, 48)}, 0.2)
-            minimizeBtn.Text = "□"
+            if Settings.QuickAccess then
+                task.delay(0.2, function()
+                    updateQuickAccessPosition()
+                    quickAccessFrame.Visible = true
+                end)
+            end
+            minimizeBtn.Text = "🗖"
         else
             content.Visible = true
+            quickAccessFrame.Visible = false
             if expandedHeight <= 48 then
                 expandedHeight = 450
             end
             tween(frame, {Size = UDim2.new(0, 420, 0, expandedHeight)}, 0.2)
             minimizeBtn.Text = "_"
+        end
+    end)
+
+    frame:GetPropertyChangedSignal("Position"):Connect(function()
+        if minimized and Settings.QuickAccess then
+            updateQuickAccessPosition()
         end
     end)
 
@@ -876,7 +910,7 @@ local function buildUI()
 
     closeBtn.MouseButton1Click:Connect(function()
         clearAllHighlights()
-        disconnectAll(RoomConns)
+        disconnectAll(RoomConns) 
         for _, pc in pairs(PlayerConns) do
             for _, c in ipairs(pc) do
                 if typeof(c) == "RBXScriptConnection" then c:Disconnect() end
@@ -892,7 +926,7 @@ local function buildUI()
             SpeedDisplayConnection:Disconnect()
             SpeedDisplayConnection = nil
         end
-        -- Restaura a visibilidade das partes forçadas
+        -- Restaura a visibilidade das partes forÃ§adas
         for _, part in ipairs(ForcedVisibleParts) do
             if part and part:IsA("BasePart") then
                 part.Transparency = 1
@@ -957,15 +991,31 @@ local function buildUI()
 
         do
         local container, _ = createSection("Configurações Extras")
+        local fullBrightRenderFunction = nil -- Renomeado e movido para um escopo mais amplo
 
-        createToggle("Iluminação total", Theme.Accent, Settings.FullBright, function(state)
+        local _, renderFunc = createToggle("Iluminação total", Theme.Accent, Settings.FullBright, function(state)
             Settings.FullBright = state
             if state then
                 applyFullBright()
             else
-                restoreLighting()
+                restoreLighting() 
+            end
+            -- Sincroniza o botão de acesso rápido
+            if _G.QuickAccessLightButton then
+                _G.QuickAccessLightButton.TextColor3 = state and Theme.Accent or Theme.Text
             end
         end, container)
+        fullBrightRenderFunction = renderFunc -- Armazena a função de renderização
+
+        -- Cria a função de controle global
+        function _G.ToggleFullBright(forceState)
+            local isEnabled = forceState
+            Settings.FullBright = isEnabled
+            Toggles["Iluminação total"] = isEnabled
+            if fullBrightRenderFunction then
+                fullBrightRenderFunction() -- Atualiza o seletor na UI principal
+            end
+        end
 
         createToggle("Somente contorno", Theme.Accent, Settings.OutlineOnly, function(state)
             Settings.OutlineOnly = state
@@ -976,10 +1026,21 @@ local function buildUI()
             Settings.AlwaysOnTop = state
             applySettingsToAll()
         end, container)
+
+        createToggle("Acesso Rápido", Theme.Accent, Settings.QuickAccess, function(state)
+            Settings.QuickAccess = state
+            if not state then
+                quickAccessFrame.Visible = false
+            elseif minimized then
+                quickAccessFrame.Visible = true
+            end
+        end, container)
     end
 
     do
         local container, _ = createSection("Velocidade")
+        local speedToggleControl, lockBtnControl, sliderControl
+        local speedRenderFunction = nil
 
         local SpeedDisplayConnection = nil
         local speedRow = Instance.new("Frame")
@@ -1094,6 +1155,7 @@ local function buildUI()
         lockBtn.AutoButtonColor = false
         lockBtn.Parent = speedRow
 
+        lockBtnControl = lockBtn
         local lockCorner = Instance.new("UICorner")
         lockCorner.CornerRadius = UDim.new(0, 6)
         lockCorner.Parent = lockBtn
@@ -1121,6 +1183,7 @@ local function buildUI()
             end
         end
 
+        sliderControl = updateSlider
         local dragging = false
         sliderKnob.InputBegan:Connect(function(input)
             if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -1172,15 +1235,16 @@ local function buildUI()
         end)
 
         SpeedDisplayConnection = RunService.Heartbeat:Connect(function()
-            if Settings.SpeedEnabled and not Settings.SpeedLocked then
+            if not speedRow.Parent.Visible then return end -- Otimização: não atualiza se não estiver visível
+            if Settings.SpeedEnabled and not Settings.SpeedLocked and not _G.SuperSpeedActive then
                 local currentSpeed = getCurrentSpeed()
                 speedDisplay.Text = tostring(math.floor(currentSpeed))
             end
         end)
 
-        updateSlider(Settings.SpeedValue)
-
-        createToggle("Ativar corrida", Theme.Accent, Settings.SpeedEnabled, function(state)
+        updateSlider(Settings.SpeedValue) 
+        
+        local speedRowToggle, speedRender, speedSwitch = createToggle("Ativar corrida", Theme.Accent, Settings.SpeedEnabled, function(state)
             Settings.SpeedEnabled = state
             if state then
                 applySpeed()
@@ -1189,8 +1253,69 @@ local function buildUI()
                     SpeedConnection:Disconnect()
                     SpeedConnection = nil
                 end
+                local char = LocalPlayer.Character
+                if char and char:FindFirstChildOfClass("Humanoid") then
+                    char.Humanoid.WalkSpeed = 16 -- Restaura para o padrão ao desativar
+                end
             end
         end, container)
+        speedRowToggle.LayoutOrder = -1 -- Garante que o toggle apareça antes do slider
+        speedToggleControl = speedSwitch
+        speedRenderFunction = speedRender -- Guarda a função de render
+
+        -- Adiciona a função de controle para o botão de acesso rápido
+        function _G.ToggleSuperSpeed(forceState)
+            local isEnabled = forceState
+            
+            local function ensureSpeedIsApplied()
+                if Settings.SpeedEnabled then
+                    applySpeed()
+                end
+            end
+            
+            if isEnabled then
+                if not (_G.SuperSpeedActive and Settings.SpeedValue == 30) then
+                    _G.PreviousSpeedSettings = {
+                        SpeedValue = Settings.SpeedValue,
+                        SpeedLocked = Settings.SpeedLocked,
+                        SpeedEnabled = Settings.SpeedEnabled
+                    }
+                end
+                sliderControl(30)
+                Settings.SpeedLocked = true
+                Settings.SpeedEnabled = true
+                ensureSpeedIsApplied()
+            else
+                if _G.PreviousSpeedSettings then
+                    sliderControl(_G.PreviousSpeedSettings.SpeedValue)
+                    Settings.SpeedLocked = _G.PreviousSpeedSettings.SpeedLocked
+                    Settings.SpeedEnabled = _G.PreviousSpeedSettings.SpeedEnabled
+                end
+                -- Garante que a velocidade seja redefinida se a corrida for desativada
+                if not Settings.SpeedEnabled then
+                    local char = LocalPlayer.Character
+                    if char and char:FindFirstChildOfClass("Humanoid") then
+                        char.Humanoid.WalkSpeed = 16
+                    end
+                end
+                ensureSpeedIsApplied()
+            end
+            _G.SuperSpeedActive = isEnabled
+            
+            -- Sincroniza o estado visual
+            lockBtn.Text = Settings.SpeedLocked and "Travado" or "Travar"
+            lockBtn.BackgroundColor3 = Settings.SpeedLocked and Theme.AccentAlt or Theme.Subtle
+            
+            -- Atualiza o toggle visualmente
+            if speedRenderFunction then
+                Toggles["Ativar corrida"] = Settings.SpeedEnabled
+                speedRenderFunction()
+            end
+            
+            if _G.QuickAccessSpeedButton then
+                _G.QuickAccessSpeedButton.TextColor3 = isEnabled and Theme.Accent or Theme.Text
+            end
+        end
     end
 
     local currentGeneratorTeleportIndex = 1
@@ -1277,7 +1402,7 @@ local function buildUI()
             if success then
                 genTpBtn.Text = message
                 genTpBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
-                task.wait(1)
+                task.wait(1) 
                 genTpBtn.Text = "Próximo Gerador"
                 genTpBtn.BackgroundColor3 = Theme.Accent
             else
@@ -1294,7 +1419,7 @@ local function buildUI()
                 tween(genTpBtn, {BackgroundColor3 = Theme.AccentAlt}, 0.15)
             end
         end)
-
+ 
         genTpBtn.MouseLeave:Connect(function()
             if genTpBtn.Text == "Próximo Gerador" then
                 tween(genTpBtn, {BackgroundColor3 = Theme.Accent}, 0.15)
@@ -1360,7 +1485,7 @@ local function buildUI()
                 gteBtn.Text = "Teleportar"
                 gteBtn.BackgroundColor3 = Theme.Accent
             else
-                gteBtn.Text = "Elevador não encontrado"
+                genTpBtn.Text = "Elevador não encontrado"
                 gteBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
                 task.wait(1.5)
                 gteBtn.Text = "Teleportar"
@@ -1405,7 +1530,7 @@ local function buildUI()
         infoText.TextWrapped = true
         infoText.Font = Enum.Font.Gotham
         infoText.TextSize = 14
-        infoText.TextColor3 = Theme.Text
+        infoText.TextColor3 = Theme.Text 
         infoText.TextXAlignment = Enum.TextXAlignment.Left
         infoText.Text = "<b>Bem-vindo ao MGPI Viewer!</b> 🚀\n\nEste script te ajuda a navegar pelo jogo com algumas ferramentas úteis:\n\n    •  <b>ESP (Visualizador):</b> 👁️ Veja monstros, geradores, itens e outros jogadores através das paredes.\n    •  <b>Iluminação Total:</b> 💡 Deixe o mapa totalmente claro, sem sombras.\n    •  <b>Velocidade:</b> 🏃‍♂️ Ajuste e trave sua velocidade de corrida.\n    •  <b>Teleporte:</b> ➡️ Vá para o elevador instantaneamente.\n\n<font color='#ffcc00'>⚠️ <b>AVISO IMPORTANTE</b> ⚠️</font>\nEste script está em desenvolvimento (<b>BETA</b>). Podem ocorrer bugs ou erros. <b>Use por sua conta e risco.</b>"
         infoText.Parent = infoRow
@@ -1413,6 +1538,83 @@ local function buildUI()
         local padding = Instance.new("UIPadding")
         padding.PaddingBottom = UDim.new(0, 10)
         padding.Parent = infoRow
+    end
+
+    do -- Botões de Acesso Rápido
+        local function makeQuickButton(text, color)
+            local btn = Instance.new("TextButton")
+            btn.Size = UDim2.new(0, 42, 0, 36)
+            btn.BackgroundColor3 = Theme.Panel
+            btn.Text = text
+            btn.TextColor3 = Theme.Text
+            btn.Font = Enum.Font.SourceSansBold
+            btn.TextSize = 20
+            btn.AutoButtonColor = false
+            btn.Parent = quickAccessFrame
+
+            local corner = Instance.new("UICorner")
+            corner.CornerRadius = UDim.new(0, 8)
+            corner.Parent = btn
+
+            local stroke = Instance.new("UIStroke")
+            stroke.Thickness = 1
+            stroke.Color = Theme.Stroke
+            stroke.Parent = btn
+
+            btn.MouseEnter:Connect(function() tween(btn, {BackgroundColor3 = Theme.Subtle}, 0.15) end)
+            btn.MouseLeave:Connect(function() tween(btn, {BackgroundColor3 = Theme.Panel}, 0.15) end)
+
+            return btn
+        end
+
+        -- Botão de Iluminação
+        _G.FullBrightActive = Settings.FullBright
+        local lightBtn = makeQuickButton("💡", Theme.Panel)
+        _G.QuickAccessLightButton = lightBtn -- Armazena a referência do botão
+        lightBtn.TextColor3 = _G.FullBrightActive and Theme.Accent or Theme.Text
+
+        lightBtn.MouseButton1Click:Connect(function()
+            _G.FullBrightActive = not _G.FullBrightActive
+            if _G.FullBrightActive then
+                applyFullBright()
+            else
+                restoreLighting()
+            end
+            _G.ToggleFullBright(_G.FullBrightActive)
+        end)
+
+        -- Botão de Teleporte para Elevador
+        local gteBtn = makeQuickButton("TP", Theme.Panel)
+        gteBtn.MouseButton1Click:Connect(function()
+            local success = teleportToElevator()
+            if success then
+                gteBtn.TextColor3 = Color3.fromRGB(0, 255, 127)
+            else
+                gteBtn.TextColor3 = Color3.fromRGB(255, 80, 80)
+            end
+            task.wait(1)
+            gteBtn.TextColor3 = Theme.Text
+        end)
+        
+        -- Botão de Super Velocidade
+        _G.SuperSpeedActive = false
+        local speedBtn = makeQuickButton("⚡", Theme.Panel) 
+        _G.QuickAccessSpeedButton = speedBtn -- Armazena a referÃªncia do botÃ£o
+        speedBtn.MouseButton1Click:Connect(function()
+            _G.SuperSpeedActive = not _G.SuperSpeedActive
+            if _G.ToggleSuperSpeed then
+                _G.ToggleSuperSpeed(_G.SuperSpeedActive)
+            end
+
+            if _G.SuperSpeedActive then
+                speedBtn.TextColor3 = Theme.Accent
+            else
+                speedBtn.TextColor3 = Theme.Text
+            end
+        end)
+
+
+
     end
 
     return screenGui
