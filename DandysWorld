@@ -33,6 +33,8 @@ local Settings = {
     SpeedValue = 16,
     SpeedLocked = false,
     QuickAccess = false,
+    JumpEnabled = false,
+    JumpValue = 50,
 }
 
 local LightingBackup = {
@@ -136,6 +138,34 @@ local function getCurrentSpeed()
         end
     end
     return 16
+end
+
+local JumpConnection = nil
+
+local function applyJump()
+    if JumpConnection then
+        JumpConnection:Disconnect()
+        JumpConnection = nil
+    end
+
+    local char = LocalPlayer.Character
+    if not Settings.JumpEnabled then
+        if char then
+            local humanoid = char:FindFirstChildOfClass("Humanoid")
+            if humanoid then
+                humanoid.UseJumpPower = false
+            end
+        end
+        return
+    end
+
+    JumpConnection = RunService.Heartbeat:Connect(function()
+        local humanoid = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        if humanoid then
+            humanoid.UseJumpPower = true
+            humanoid.JumpPower = Settings.JumpValue
+        end
+    end)
 end
 
 local function teleportToElevator()
@@ -922,6 +952,14 @@ local function buildUI()
         if SpeedConnection then
             SpeedConnection:Disconnect()
         end
+        if JumpConnection then
+            JumpConnection:Disconnect()
+            JumpConnection = nil
+            local char = LocalPlayer.Character
+            if char and char:FindFirstChildOfClass("Humanoid") then
+                char.Humanoid.UseJumpPower = false
+            end
+        end
         if SpeedDisplayConnection then
             SpeedDisplayConnection:Disconnect()
             SpeedDisplayConnection = nil
@@ -1318,6 +1356,154 @@ local function buildUI()
         end
     end
 
+    do
+        local container, _ = createSection("Pulo")
+        local jumpSliderControl
+
+        local jumpRow = Instance.new("Frame")
+        jumpRow.BackgroundColor3 = Theme.Background
+        jumpRow.BorderSizePixel = 0
+        jumpRow.Size = UDim2.new(1, 0, 0, 100)
+        jumpRow.Parent = container
+
+        local jumpCorner = Instance.new("UICorner")
+        jumpCorner.CornerRadius = UDim.new(0, 8)
+        jumpCorner.Parent = jumpRow
+
+        local jumpStroke = Instance.new("UIStroke")
+        jumpStroke.Thickness = 1
+        jumpStroke.Color = Theme.Stroke
+        jumpStroke.Parent = jumpRow
+
+        local jumpLabel = Instance.new("TextLabel")
+        jumpLabel.BackgroundTransparency = 1
+        jumpLabel.Size = UDim2.new(1, -100, 0, 20)
+        jumpLabel.Position = UDim2.new(0, 10, 0, 10)
+        jumpLabel.Text = "Força do Pulo"
+        jumpLabel.Font = Enum.Font.Gotham
+        jumpLabel.TextSize = 14
+        jumpLabel.TextXAlignment = Enum.TextXAlignment.Left
+        jumpLabel.TextColor3 = Theme.Text
+        jumpLabel.Parent = jumpRow
+
+        local jumpDisplay = Instance.new("TextLabel")
+        jumpDisplay.BackgroundColor3 = Theme.Panel
+        jumpDisplay.Size = UDim2.new(0, 80, 0, 24)
+        jumpDisplay.Position = UDim2.new(1, -90, 0, 8)
+        jumpDisplay.Text = tostring(Settings.JumpValue)
+        jumpDisplay.Font = Enum.Font.GothamBold
+        jumpDisplay.TextSize = 16
+        jumpDisplay.TextColor3 = Theme.Accent
+        jumpDisplay.Parent = jumpRow
+
+        local displayCorner = Instance.new("UICorner")
+        displayCorner.CornerRadius = UDim.new(0, 6)
+        displayCorner.Parent = jumpDisplay
+
+        local displayStroke = Instance.new("UIStroke")
+        displayStroke.Thickness = 1
+        displayStroke.Color = Theme.Stroke
+        displayStroke.Parent = jumpDisplay
+
+        local sliderBg = Instance.new("Frame")
+        sliderBg.BackgroundColor3 = Theme.Subtle
+        sliderBg.Size = UDim2.new(1, -20, 0, 6)
+        sliderBg.Position = UDim2.new(0, 10, 0, 45)
+        sliderBg.Parent = jumpRow
+
+        local sliderBgCorner = Instance.new("UICorner")
+        sliderBgCorner.CornerRadius = UDim.new(1, 0)
+        sliderBgCorner.Parent = sliderBg
+
+        local sliderFill = Instance.new("Frame")
+        sliderFill.BackgroundColor3 = Theme.Accent
+        sliderFill.Size = UDim2.new(0, 0, 1, 0)
+        sliderFill.Parent = sliderBg
+
+        local sliderFillCorner = Instance.new("UICorner")
+        sliderFillCorner.CornerRadius = UDim.new(1, 0)
+        sliderFillCorner.Parent = sliderFill
+
+        local sliderKnob = Instance.new("Frame")
+        sliderKnob.BackgroundColor3 = Theme.Accent
+        sliderKnob.Size = UDim2.new(0, 18, 0, 18)
+        sliderKnob.Position = UDim2.new(0, -9, 0.5, -9)
+        sliderKnob.Parent = sliderBg
+
+        local knobCorner = Instance.new("UICorner")
+        knobCorner.CornerRadius = UDim.new(1, 0)
+        knobCorner.Parent = sliderKnob
+
+        local knobStroke = Instance.new("UIStroke")
+        knobStroke.Thickness = 2
+        knobStroke.Color = Theme.Stroke
+        knobStroke.Parent = sliderKnob
+
+        local minLabel = Instance.new("TextLabel")
+        minLabel.BackgroundTransparency = 1
+        minLabel.Size = UDim2.new(0, 30, 0, 20)
+        minLabel.Position = UDim2.new(0, 10, 0, 55)
+        minLabel.Text = "50"
+        minLabel.Font = Enum.Font.Gotham
+        minLabel.TextSize = 12
+        minLabel.TextColor3 = Theme.Text
+        minLabel.TextXAlignment = Enum.TextXAlignment.Left
+        minLabel.Parent = jumpRow
+
+        local maxLabel = Instance.new("TextLabel")
+        maxLabel.BackgroundTransparency = 1
+        maxLabel.Size = UDim2.new(0, 30, 0, 20)
+        maxLabel.Position = UDim2.new(1, -40, 0, 55)
+        maxLabel.Text = "200"
+        maxLabel.Font = Enum.Font.Gotham
+        maxLabel.TextSize = 12
+        maxLabel.TextColor3 = Theme.Text
+        maxLabel.TextXAlignment = Enum.TextXAlignment.Right
+        maxLabel.Parent = jumpRow
+
+        local function updateSlider(value)
+            local min, max = 50, 200
+            local percent = (value - min) / (max - min)
+            sliderKnob.Position = UDim2.new(percent, -9, 0.5, -9)
+            sliderFill.Size = UDim2.new(percent, 0, 1, 0)
+            jumpDisplay.Text = tostring(math.floor(value))
+            Settings.JumpValue = value
+            applyJump()
+        end
+        jumpSliderControl = updateSlider
+
+        local dragging = false
+        local function handleInput(input)
+            if dragging then
+                local pos = (input.Position.X - sliderBg.AbsolutePosition.X) / sliderBg.AbsoluteSize.X
+                pos = math.clamp(pos, 0, 1)
+                local value = 50 + (pos * (200 - 50))
+                updateSlider(value)
+            end
+        end
+
+        sliderBg.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                dragging = true
+                handleInput(input)
+            end
+        end)
+        game:GetService("UserInputService").InputChanged:Connect(handleInput)
+        game:GetService("UserInputService").InputEnded:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                dragging = false
+            end
+        end)
+
+        updateSlider(Settings.JumpValue)
+
+        local jumpRowToggle, jumpRender, jumpSwitch = createToggle("Ativar pulo", Theme.Accent, Settings.JumpEnabled, function(state)
+            Settings.JumpEnabled = state
+            applyJump()
+        end, container)
+        jumpRowToggle.LayoutOrder = -1
+    end
+
     local currentGeneratorTeleportIndex = 1
     do
         local container, _ = createSection("Teleporte para Gerador")
@@ -1613,6 +1799,20 @@ local function buildUI()
             end
         end)
 
+        -- Botão de Pulo
+        _G.JumpActive = Settings.JumpEnabled
+        local jumpBtn = makeQuickButton("↑", Theme.Panel)
+        jumpBtn.TextColor3 = _G.JumpActive and Theme.Accent or Theme.Text
+        jumpBtn.MouseButton1Click:Connect(function()
+            _G.JumpActive = not _G.JumpActive
+            Settings.JumpEnabled = _G.JumpActive
+            Toggles["Ativar pulo"] = _G.JumpActive
+            -- A função applyJump será chamada pelo toggle, então precisamos simular o clique
+            -- ou chamar a função de callback diretamente.
+            applyJump()
+            jumpBtn.TextColor3 = _G.JumpActive and Theme.Accent or Theme.Text
+            -- Precisamos de uma forma de atualizar o toggle na UI principal.
+        end)
 
 
     end
