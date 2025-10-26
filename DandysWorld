@@ -1,4 +1,4 @@
--- MGPI View v4.3
+-- MGI View v4.3
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
@@ -477,21 +477,40 @@ RunService.Heartbeat:Connect(function()
     end
 end)
 
+local MobileJumpButton = nil
+
 local function buildUI()
     local screenGui = Instance.new("ScreenGui")
     screenGui.Name = "MGIViewGUI"
     screenGui.IgnoreGuiInset = true
     screenGui.ResetOnSpawn = false
     screenGui.Parent = PlayerGui
+    
+    local viewportSize = Workspace.CurrentCamera.ViewportSize
+    local isMobile = viewportSize.X < 720 -- Ponto de quebra para telas menores
 
+    local frameWidth = isMobile and 320 or 420
+    local frameHeight = isMobile and 400 or 450
+
+    -- Cria o botão de pulo para mobile, mas o deixa invisível por padrão
+    MobileJumpButton = Instance.new("ImageButton")
+    MobileJumpButton.Name = "MobileJumpButton"
+    MobileJumpButton.Size = UDim2.new(0, 70, 0, 70)
+    MobileJumpButton.Position = UDim2.new(1, -85, 1, -85)
+    MobileJumpButton.Image = "rbxassetid://509919223" -- Ícone de pulo padrão do Roblox
+    MobileJumpButton.BackgroundTransparency = 1
+    MobileJumpButton.Visible = false
+    MobileJumpButton.Parent = screenGui
+    
     local quickAccessFrame = Instance.new("Frame")
     quickAccessFrame.Name = "QuickAccessFrame"
     quickAccessFrame.BackgroundTransparency = 1
 
     local frame = Instance.new("Frame")
     frame.Name = "MainFrame"
-    frame.Size = UDim2.new(0, 420, 0, 48) -- Altura inicial apenas para o header
-    frame.Position = UDim2.new(0.5, -210, 0.5, -240)
+    -- Posição e tamanho iniciais para o estado minimizado
+    frame.Size = UDim2.new(0, frameWidth, 0, 48)
+    frame.Position = UDim2.new(0.5, -frameWidth / 2, 0.5, -48 / 2)
     frame.BackgroundColor3 = Theme.Background
     frame.BorderSizePixel = 0
     frame.ClipsDescendants = true
@@ -899,30 +918,31 @@ local function buildUI()
         quickAccessFrame.Position = UDim2.fromOffset(framePos.X + (frameSize.X / 2) - (quickAccessFrame.AbsoluteSize.X / 2), framePos.Y + frameSize.Y + 65)
     end
 
-    local minimized = false
-    local expandedHeight = 450 -- Altura inicial padrÃ£o
-    frame.Size = UDim2.new(0, 420, 0, expandedHeight)
+    local minimized = true -- Alterado para iniciar minimizado
+    local expandedHeight = frameHeight -- Altura inicial padrão
+    content.Visible = false
+    minimizeBtn.Text = "🗖"
+    if Settings.QuickAccess then
+        task.defer(function() -- Usa defer para garantir que a posição seja calculada corretamente
+            updateQuickAccessPosition()
+            quickAccessFrame.Visible = true
+        end)
+    end
 
     minimizeBtn.MouseButton1Click:Connect(function()
         minimized = not minimized
         if minimized then
             expandedHeight = frame.AbsoluteSize.Y
             content.Visible = false
-            tween(frame, {Size = UDim2.new(0, 420, 0, 48)}, 0.2)
-            if Settings.QuickAccess then
-                task.delay(0.2, function()
-                    updateQuickAccessPosition()
-                    quickAccessFrame.Visible = true
-                end)
-            end
+            -- Centraliza a janela minimizada antes de animar o tamanho
+            tween(frame, {Position = UDim2.new(0.5, -frameWidth / 2, 0.5, -48 / 2), Size = UDim2.new(0, frameWidth, 0, 48)}, 0.2)
+            if Settings.QuickAccess then task.delay(0.2, function() updateQuickAccessPosition(); quickAccessFrame.Visible = true end) end
             minimizeBtn.Text = "🗖"
         else
             content.Visible = true
             quickAccessFrame.Visible = false
-            if expandedHeight <= 48 then
-                expandedHeight = 450
-            end
-            tween(frame, {Size = UDim2.new(0, 420, 0, expandedHeight)}, 0.2)
+            -- Centraliza a janela expandida antes de animar o tamanho
+            tween(frame, {Position = UDim2.new(0.5, -frameWidth / 2, 0.5, -(expandedHeight <= 48 and frameHeight or expandedHeight) / 2), Size = UDim2.new(0, frameWidth, 0, expandedHeight <= 48 and frameHeight or expandedHeight)}, 0.2)
             minimizeBtn.Text = "_"
         end
     end)
@@ -959,6 +979,10 @@ local function buildUI()
             if char and char:FindFirstChildOfClass("Humanoid") then
                 char.Humanoid.UseJumpPower = false
             end
+        end
+        if MobileJumpButton then
+            MobileJumpButton:Destroy()
+            MobileJumpButton = nil
         end
         if SpeedDisplayConnection then
             SpeedDisplayConnection:Disconnect()
@@ -1499,6 +1523,12 @@ local function buildUI()
 
         local jumpRowToggle, jumpRender, jumpSwitch = createToggle("Ativar pulo", Theme.Accent, Settings.JumpEnabled, function(state)
             Settings.JumpEnabled = state
+            if MobileJumpButton then
+                MobileJumpButton.Visible = state
+                MobileJumpButton.MouseButton1Click:Connect(function()
+                    LocalPlayer.Character.Humanoid.Jump = true
+                end)
+            end
             applyJump()
         end, container)
         jumpRowToggle.LayoutOrder = -1
@@ -1567,7 +1597,8 @@ local function buildUI()
             if #generators == 0 then return false, "Nenhum gerador ativo" end
 
             table.sort(generators, function(a, b)
-                return (a.PrimaryPart.Position - hrp.Position).Magnitude < (b.PrimaryPart.Position - hrp.Position).Magnitude
+                local posA = a:IsA("Model") and a.PrimaryPart and a.PrimaryPart.Position or a.Position
+                return (posA - hrp.Position).Magnitude < ((b:IsA("Model") and b.PrimaryPart and b.PrimaryPart.Position or b.Position) - hrp.Position).Magnitude
             end)
 
             if currentGeneratorTeleportIndex > #generators then
@@ -1693,8 +1724,7 @@ local function buildUI()
     end
 
     do
-        local container, toggle = createSection("Sobre & Avisos")
-        toggle()
+        local container, _ = createSection("Sobre & Avisos") -- Alterado: não expande mais por padrão
 
         local infoRow = Instance.new("Frame")
         infoRow.BackgroundColor3 = Theme.Background
